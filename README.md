@@ -26,6 +26,7 @@ Topics include:
 │   └── processed/         # Cleaned or derived data
 ├── scripts/agentbus.py   # Agent Bus client (multi-device agent messaging)
 ├── tests/                 # Tests for the Agent Bus client
+├── docs/agent-workflow.md # How agents plan, build teams, and use worktrees
 ├── AGENTS.md              # Rules for AI agents working in this repo
 ├── CONTRIBUTING.md
 └── LICENSE

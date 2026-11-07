@@ -6,3 +6,10 @@ Polished write-ups live here. Suggested files as research progresses:
 - `policy.md`: state and local housing laws and how they apply
 - `county-profiles/`: one file per county with key stats
 - `how-to-apply.md`: practical guide to finding and applying for affordable units
+
+## Agent documentation
+
+Process docs, not research write-ups:
+
+- [`agent-workflow.md`](agent-workflow.md): how an agent turns a prompt into a plan, a team, worktrees, and subagents
+- [`agent-protocol.md`](agent-protocol.md): the Agent Bus Protocol for coordinating agents across devices
