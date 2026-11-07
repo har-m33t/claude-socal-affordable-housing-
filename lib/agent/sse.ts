@@ -16,11 +16,28 @@ export const SSE_HEADERS: Record<string, string> = {
 };
 
 /**
- * Exactly `data: {json}\n\n`. JSON.stringify never emits a raw newline, so a
- * frame is always one line and never needs multi-line `data:` continuation.
+ * SSE event name for a frame, or null for an action frame.
+ *
+ * Control frames carry `event: <type>` so a harness can route them without
+ * parsing the payload; action frames deliberately carry no name, so a default
+ * `message` listener sees agent actions and nothing else. A consumer that
+ * parses `data` is unaffected either way, since the JSON is identical.
+ */
+export function frameEventName(frame: StreamFrame): string | null {
+  return frame.type === "event" ? null : frame.type;
+}
+
+/**
+ * One SSE message. `data: {json}\n\n` for an action frame, and
+ * `event: <type>\ndata: {json}\n\n` for a control frame.
+ *
+ * JSON.stringify never emits a raw newline, so the payload is always one line
+ * and never needs multi-line `data:` continuation.
  */
 export function formatFrame(frame: StreamFrame): string {
-  return `data: ${JSON.stringify(frame)}\n\n`;
+  const name = frameEventName(frame);
+  const payload = `data: ${JSON.stringify(frame)}\n\n`;
+  return name === null ? payload : `event: ${name}\n${payload}`;
 }
 
 /** Errors leaving the loop become this frame. Carries no request content. */
