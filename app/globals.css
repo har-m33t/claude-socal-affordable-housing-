@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./tokens.css";
 
 /* Pointer theme: cream paper, terracotta accent, serif headings.
    Fonts are system stacks on purpose: no network fetch, so the demo works offline. */

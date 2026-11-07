@@ -2,6 +2,11 @@
 // accept/reject decisions. The report page reuses it, so the editor and the report always agree.
 import { normalizeCitation, type AgentEvent, type CityConfig, type Citation, type ItemStatus } from "./contract";
 
+/** The ids an event may name: a city checklist, or a plan's targets. Both have `{ id }` entries. */
+export interface TargetScope {
+  checklist: ReadonlyArray<{ id: string }>;
+}
+
 export interface Suggestion {
   id: string; // event index, unique within a run
   text: string;
@@ -40,7 +45,7 @@ export function initialRunState(): RunState {
   return { items: {}, log: [] };
 }
 
-export function applyEvent(state: RunState, event: AgentEvent, index: number, city: CityConfig): RunState {
+export function applyEvent(state: RunState, event: AgentEvent, index: number, city: TargetScope): RunState {
   const citation = normalizeCitation(event.citation);
   // Security: item IDs must exist in the loaded city file, otherwise the event is ignored.
   if (!city.checklist.some((c) => c.id === event.item_id)) {
@@ -98,7 +103,7 @@ export function decide(state: RunState, itemId: string, suggestionId: string, de
   };
 }
 
-export function foldEvents(events: AgentEvent[], city: CityConfig): RunState {
+export function foldEvents(events: AgentEvent[], city: TargetScope): RunState {
   return events.reduce((s, e, i) => applyEvent(s, e, i, city), initialRunState());
 }
 

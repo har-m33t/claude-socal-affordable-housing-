@@ -1,0 +1,169 @@
+{
+  "about": "v0 plan (lead scaffold) built only from data already in the repo: Team 1's six Anaheim checklist items (read from the Nov 2025 PDF) and the made-up applicant's packet. The data lane extends it with more documents. Target texts are verbatim from their documents.",
+  "city": "Anaheim",
+  "project_type": "adu",
+  "checked_date": "2026-11-07",
+  "documents": [
+    {
+      "id": "packet",
+      "title": "Your files (made up)",
+      "kind": "packet",
+      "made_up": true
+    },
+    {
+      "id": "z412",
+      "title": "ADU Submittal Requirements Checklist (Nov 2025)",
+      "kind": "pdf",
+      "url": "/data/docs/anaheim-adu-checklist.pdf",
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
+      "checked_date": "2026-11-07"
+    }
+  ],
+  "targets": [
+    {
+      "id": "file-sewer-capacity-email",
+      "doc": "packet",
+      "label": "sewer-capacity-email.pdf",
+      "text": "sewer-capacity-email.pdf (declared type: sewer_capacity_verification). Made-up applicant file."
+    },
+    {
+      "id": "file-new-address-request",
+      "doc": "packet",
+      "label": "new-address-request.pdf",
+      "text": "new-address-request.pdf (declared type: new_address_request). Made-up applicant file."
+    },
+    {
+      "id": "file-floor-plan",
+      "doc": "packet",
+      "label": "floor-plan.pdf",
+      "text": "floor-plan.pdf (declared type: unknown). Made-up applicant file."
+    },
+    {
+      "id": "sewer-capacity-verification",
+      "doc": "z412",
+      "label": "Sewer verification",
+      "text": "1. SEWER DEFICIENCY VERIFICATION: Provide a copy of written verification from the Public Works Department verifying that there is sewer capacity to add an ADU to the property. This written verification may be obtained by submitting an email request to the Public Works Department to PWPermits@anaheim.net. Please allow up to four days to receive a reply to your email inquiry.",
+      "page": 1,
+      "box": [
+        36.0,
+        274.7,
+        542.5,
+        62.0
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "meter-spot-report",
+      "doc": "z412",
+      "label": "Meter spot report",
+      "text": "2. METER SPOT REPORT: Complete this step if you are adding a new electric meter, upgrading an existing meter, and/or relocating an existing meter. Request a meter sport report inspection online (Anaheim.net/3472) or by calling 714-765-6847. A utility inspector will contact you within two to three business days and provide you a copy of the meter spot report. Include the meter spot report on your building plan check submittal.",
+      "page": 1,
+      "box": [
+        36.0,
+        337.2,
+        544.4,
+        62.0
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "new-address-request",
+      "doc": "z412",
+      "label": "New address request",
+      "text": "3. NEW ADDRESS REQUEST: Complete this step prior to plan submittal to avoid any time delays. Submit a completed New Address Request Application and site plan to BusinessAssistance@anaheim.net. You will be contacted via email with a link for payment on the AnaheimNext website. If submitting in-person, please arrive by 11:00 am to ensure same day processing.",
+      "page": 1,
+      "box": [
+        36.0,
+        399.6,
+        542.5,
+        62.1
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "jadu-owner-occupancy-covenant",
+      "doc": "z412",
+      "label": "Owner occupancy covenant (JADU)",
+      "text": "1. OWNER OCCUPANCY COVENANT: AMC Section 18.38.015.110 requires the recordation of an owner occupancy covenant for all JADUs, authorized by the California Government Code Sections 65852.2 and 65852.22. The covenant for the JADU will be drafted by the City Attorney’s office and must be recorded with the Orange County Clerk-Recorder’s office prior to the issuance of a building permit. The covenant will specify the following, at a minimum: • The JADU shall not be sold or owned separately from the main dwelling and the parcel upon which the unit is located and shall not be subdivided in any manner that would authorize such sale or ownership; • Owner occupancy is required within one of the dwelling units on the property; and • Owner occupancy shall be binding upon any successor in ownership of the property. Email the following documents to your assigned project Planner as soon as possible for the City to verify current ownership of the property. The current owner(s) will be listed in the covenant and will be requested to sign covenant at the City Clerk’s office:",
+      "page": 1,
+      "box": [
+        36.0,
+        491.4,
+        542.5,
+        181.7
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "jadu-title-report",
+      "doc": "z412",
+      "label": "Title report (JADU)",
+      "text": "TITLE REPORT (Must have been prepared within the last 6 months of submittal date)",
+      "page": 1,
+      "box": [
+        72.0,
+        673.3,
+        407.8,
+        16.1
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "jadu-grant-deed",
+      "doc": "z412",
+      "label": "Grant deed (JADU)",
+      "text": "GRANT DEED",
+      "page": 1,
+      "box": [
+        72.0,
+        689.4,
+        88.9,
+        27.5
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    }
+  ],
+  "steps": [
+    {
+      "id": "organize-files",
+      "title": "Organize your files",
+      "kind": "organize",
+      "doc": "packet",
+      "targets": [
+        "file-sewer-capacity-email",
+        "file-new-address-request",
+        "file-floor-plan"
+      ]
+    },
+    {
+      "id": "gather-before-plan-check",
+      "title": "Gather what's due before plan check",
+      "kind": "gather",
+      "doc": "z412",
+      "targets": [
+        "sewer-capacity-verification",
+        "meter-spot-report",
+        "new-address-request"
+      ]
+    },
+    {
+      "id": "check-the-law",
+      "title": "Check the law the checklist cites",
+      "kind": "law",
+      "doc": "z412",
+      "targets": [
+        "jadu-owner-occupancy-covenant"
+      ]
+    },
+    {
+      "id": "final-check",
+      "title": "Final check before you submit",
+      "kind": "final",
+      "doc": "z412",
+      "targets": [
+        "jadu-title-report",
+        "jadu-grant-deed"
+      ]
+    }
+  ]
+}

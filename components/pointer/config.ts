@@ -8,6 +8,8 @@ import citiesFixture from "@/fixtures/mock-cities.json";
 import typesFixture from "@/fixtures/mock-types.json";
 import packetFixture from "@/fixtures/mock-packet.json";
 import eventsFixture from "@/fixtures/mock-events.json";
+import planAnaheimAdu from "@/data/plans/anaheim-adu.json";
+import { checkPlan, type Plan } from "./plan";
 import {
   parseEvent,
   type AgentEvent,
@@ -73,3 +75,11 @@ export function loadMockEvents(): { events: AgentEvent[]; dropped: number } {
   }
   return { events, dropped };
 }
+
+/** The multi-step plan for the default city and type. Invalid plans throw at load. */
+export const PLAN: Plan = (() => {
+  const plan = planAnaheimAdu as unknown as Plan;
+  const problems = checkPlan(plan);
+  if (problems.length) throw new Error(`data/plans/anaheim-adu.json is invalid: ${problems.join("; ")}`);
+  return plan;
+})();
