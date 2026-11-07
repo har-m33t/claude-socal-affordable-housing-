@@ -1,6 +1,7 @@
 # Pointer data (Team 1)
 
-Read 2026-11-07. Nothing here is `verified: true` or `confirmed: true` until a person on the team
+Read 2026-11-07. Anaheim (`verified: true`) and all of `statutes.json` (`confirmed: true`) were
+reviewed by the Team 1 lead on 2026-11-07. Everything else stays unverified until a person on the team
 has checked it. The app must show "not yet verified" for anything unverified and give no advice
 from it.
 

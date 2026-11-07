@@ -93,7 +93,7 @@ def main() -> int:
         })
     city = {
         "city": "Anaheim",
-        "verified": False,
+        "verified": True,  # reviewed by the Team 1 lead, 2026-11-07
         "checked_date": CHECKED,
         "sources": [
             {"title": "ADU Anaheim (three ways to approve an ADU, incl. ADU Express)",

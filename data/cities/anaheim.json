@@ -1,6 +1,6 @@
 {
   "city": "Anaheim",
-  "verified": false,
+  "verified": true,
   "checked_date": "2026-11-07",
   "sources": [
     {
