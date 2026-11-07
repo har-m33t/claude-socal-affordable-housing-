@@ -1,125 +1,110 @@
 {
-  "_mock": "MOCK agent run for UI development (Team 2), shaped like the build plan's event contract {tool, item_id, status?, text?, citation?, ts}. Made-up applicant; [OWNER_1] and [ADDRESS_1] are redaction tokens. Replace with Team 3's SSE stream or fixtures/replay.json at 12:45.",
+  "about": "Scripted run over Anaheim's REAL checklist (Team 1, read from the November 2025 PDF) and the made-up applicant packet. No model is called. Statuses follow the packet: the meter spot report and the site plan are deliberately absent.",
   "events": [
     {
       "tool": "point_to",
-      "item_id": "item-01",
-      "text": "Reading item 1: the ADU application form.",
-      "ts": "2026-11-07T20:00:00Z"
+      "item_id": "sewer-capacity-verification",
+      "ts": "2026-11-07T21:00:01Z"
     },
     {
       "tool": "mark_item",
-      "item_id": "item-01",
+      "item_id": "sewer-capacity-verification",
       "status": "complete",
-      "text": "Found application-form.pdf in the packet. It is classified as the application.",
-      "ts": "2026-11-07T20:00:02Z"
+      "text": "Found sewer-capacity-email.pdf in your packet. It answers this step.",
+      "ts": "2026-11-07T21:00:02Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "meter-spot-report",
+      "ts": "2026-11-07T21:00:03Z"
+    },
+    {
+      "tool": "highlight",
+      "item_id": "meter-spot-report",
+      "ts": "2026-11-07T21:00:04Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "meter-spot-report",
+      "status": "missing",
+      "text": "Nothing in your packet answers this step.",
+      "ts": "2026-11-07T21:00:05Z"
+    },
+    {
+      "tool": "add_note",
+      "item_id": "meter-spot-report",
+      "text": "Your project adds a new electric meter, so this step applies to you. Ask your contractor for it before you submit.",
+      "ts": "2026-11-07T21:00:06Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "new-address-request",
+      "ts": "2026-11-07T21:00:07Z"
     },
     {
       "tool": "draft_field",
-      "item_id": "item-01",
+      "item_id": "new-address-request",
       "text": "Owner: [OWNER_1]. Project: detached ADU behind the main house at [ADDRESS_1].",
-      "ts": "2026-11-07T20:00:04Z"
-    },
-    {
-      "tool": "point_to",
-      "item_id": "item-02",
-      "text": "Reading item 2: the site plan.",
-      "ts": "2026-11-07T20:00:06Z"
+      "ts": "2026-11-07T21:00:08Z"
     },
     {
       "tool": "mark_item",
-      "item_id": "item-02",
+      "item_id": "new-address-request",
       "status": "missing",
-      "text": "No site plan found in the packet.",
-      "ts": "2026-11-07T20:00:08Z"
+      "text": "new-address-request.pdf is in your packet, but the site plan it asks you to attach is not.",
+      "ts": "2026-11-07T21:00:09Z"
     },
     {
       "tool": "add_note",
-      "item_id": "item-02",
-      "text": "A site plan usually comes from your designer. Ask them for one that shows the existing house, the new ADU and the distances to the property lines.",
-      "ts": "2026-11-07T20:00:10Z"
+      "item_id": "new-address-request",
+      "text": "A site plan usually comes from your designer. Ask for one showing the existing house, the new unit and the distances to the property lines.",
+      "ts": "2026-11-07T21:00:10Z"
     },
     {
       "tool": "point_to",
-      "item_id": "item-03",
-      "text": "Reading item 3: the floor plan and elevations.",
-      "ts": "2026-11-07T20:00:12Z"
+      "item_id": "jadu-owner-occupancy-covenant",
+      "ts": "2026-11-07T21:00:11Z"
     },
     {
       "tool": "mark_item",
-      "item_id": "item-03",
-      "status": "complete",
-      "text": "Found floor-plan-v2.pdf.",
-      "ts": "2026-11-07T20:00:14Z"
-    },
-    {
-      "tool": "point_to",
-      "item_id": "item-04",
-      "text": "Reading item 4: sewer capacity verification.",
-      "ts": "2026-11-07T20:00:16Z"
-    },
-    {
-      "tool": "mark_item",
-      "item_id": "item-04",
+      "item_id": "jadu-owner-occupancy-covenant",
       "status": "unknown",
-      "text": "It is unknown whether this sign-off must come before submittal. Ask the city.",
-      "ts": "2026-11-07T20:00:18Z"
+      "text": "This step is for junior units inside the house. Your project is a detached unit, so it may not apply. Confirm with the city.",
+      "ts": "2026-11-07T21:00:12Z"
     },
     {
       "tool": "point_to",
-      "item_id": "item-05",
-      "text": "Reading item 5: the water meter location.",
-      "ts": "2026-11-07T20:00:20Z"
+      "item_id": "jadu-title-report",
+      "ts": "2026-11-07T21:00:13Z"
     },
     {
       "tool": "mark_item",
-      "item_id": "item-05",
-      "status": "missing",
-      "text": "This needs the site plan, which is missing.",
-      "ts": "2026-11-07T20:00:22Z"
-    },
-    {
-      "tool": "point_to",
-      "item_id": "item-06",
-      "text": "Reading item 6: the new address request.",
-      "ts": "2026-11-07T20:00:24Z"
-    },
-    {
-      "tool": "draft_field",
-      "item_id": "item-06",
-      "text": "Please assign a new address to the proposed ADU at [ADDRESS_1].",
-      "ts": "2026-11-07T20:00:26Z"
-    },
-    {
-      "tool": "mark_item",
-      "item_id": "item-06",
-      "status": "missing",
-      "text": "Request drafted. It is not filed until you send it.",
-      "ts": "2026-11-07T20:00:28Z"
-    },
-    {
-      "tool": "point_to",
-      "item_id": "item-07",
-      "text": "Reading item 7: the JADU covenant.",
-      "ts": "2026-11-07T20:00:30Z"
-    },
-    {
-      "tool": "mark_item",
-      "item_id": "item-07",
+      "item_id": "jadu-title-report",
       "status": "unknown",
-      "text": "The packet doesn't say whether this is a JADU. If it isn't, this item does not apply.",
-      "ts": "2026-11-07T20:00:32Z"
+      "text": "This step is for junior units inside the house. Your project is a detached unit, so it may not apply. Confirm with the city.",
+      "ts": "2026-11-07T21:00:14Z"
     },
     {
       "tool": "point_to",
-      "item_id": "item-08",
-      "text": "Reading item 8: the statute reference.",
-      "ts": "2026-11-07T20:00:34Z"
+      "item_id": "jadu-grant-deed",
+      "ts": "2026-11-07T21:00:15Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "jadu-grant-deed",
+      "status": "unknown",
+      "text": "This step is for junior units inside the house. Your project is a detached unit, so it may not apply. Confirm with the city.",
+      "ts": "2026-11-07T21:00:16Z"
+    },
+    {
+      "tool": "highlight",
+      "item_id": "jadu-owner-occupancy-covenant",
+      "ts": "2026-11-07T21:00:17Z"
     },
     {
       "tool": "add_note",
-      "item_id": "item-08",
-      "text": "Law Lens: this line of the city's checklist cites a section number that the state renumbered. The current citation is shown beside it, straight from the statute table. Confirm with the city before you rely on it.",
+      "item_id": "jadu-owner-occupancy-covenant",
+      "text": "Law Lens: this line of the city's own checklist cites a section number the state has since renumbered. The current citation is shown beside it, taken from the statute table. Confirm with the city before you rely on it.",
       "statute_ref": {
         "id": "adu-renumbered-sb477",
         "old": "65852.2",
@@ -128,39 +113,7 @@
         "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
         "checked_date": "2026-11-07"
       },
-      "ts": "2026-11-07T20:00:36Z"
-    },
-    {
-      "tool": "add_note",
-      "item_id": "item-08",
-      "text": "Ask the city whether an updated checklist that uses the current section numbers is available.",
-      "ts": "2026-11-07T20:00:38Z"
-    },
-    {
-      "tool": "point_to",
-      "item_id": "item-09",
-      "text": "Reading item 9: the owner liability affidavit.",
-      "ts": "2026-11-07T20:00:40Z"
-    },
-    {
-      "tool": "mark_item",
-      "item_id": "item-09",
-      "status": "complete",
-      "text": "Found hold-harmless-signed.pdf.",
-      "ts": "2026-11-07T20:00:42Z"
-    },
-    {
-      "tool": "point_to",
-      "item_id": "item-10",
-      "text": "Reading item 10: the school district fee form.",
-      "ts": "2026-11-07T20:00:44Z"
-    },
-    {
-      "tool": "mark_item",
-      "item_id": "item-10",
-      "status": "unknown",
-      "text": "IMG_2041.jpg could not be classified. It may be this form. Please check it.",
-      "ts": "2026-11-07T20:00:46Z"
+      "ts": "2026-11-07T21:00:18Z"
     }
   ]
 }

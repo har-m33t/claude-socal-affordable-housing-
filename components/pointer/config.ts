@@ -1,7 +1,9 @@
-// The one place the UI loads config and events. Until 12:45 everything comes from fixtures/.
-// At integration, swap these imports for Team 1's data/cities/*.json and types/*.json, and
-// swap the events for Team 3's stream. Components never import fixtures directly.
-import cityAnaheim from "@/fixtures/mock-city-anaheim.json";
+// The one place the UI loads config and events. Integrated: the city config and
+// project types are now Team 1's REAL data, read first-hand from Anaheim's
+// November 2025 PDF. Only the event stream is still scripted - swapping it for
+// Team 3's live SSE is the remaining step.
+import cityAnaheim from "@/data/cities/anaheim.json";
+import typeAdu from "@/data/types/adu.json";
 import citiesFixture from "@/fixtures/mock-cities.json";
 import typesFixture from "@/fixtures/mock-types.json";
 import packetFixture from "@/fixtures/mock-packet.json";
@@ -15,10 +17,27 @@ import {
   type ProjectType,
 } from "./contract";
 
-export const DATA_MODE = "mock" as const;
+/**
+ * "scripted": real city data, but the run is replayed from fixtures rather than
+ * driven by the model. "live" once the editor is wired to /api/agent.
+ */
+export const DATA_MODE: "scripted" | "live" = "scripted";
+
+/**
+ * Team 1 records checklist_pdf as a repo path (data/docs/...). Next only serves
+ * public/, so the same file is copied to public/data/docs/ and the repo path
+ * maps onto the served URL by prefixing a slash.
+ */
+function servedPdf(repoPath: string | undefined): string {
+  if (!repoPath) return "";
+  return repoPath.startsWith("/") ? repoPath : `/${repoPath}`;
+}
 
 const CITY_CONFIGS: Record<string, CityConfig> = {
-  Anaheim: cityAnaheim as unknown as CityConfig,
+  Anaheim: {
+    ...(cityAnaheim as unknown as CityConfig),
+    checklist_pdf: servedPdf((cityAnaheim as { checklist_pdf?: string }).checklist_pdf),
+  },
 };
 
 export const COVERAGE: CoverageRow[] = (citiesFixture.cities as CoverageRow[]).map((row) => ({
@@ -27,7 +46,11 @@ export const COVERAGE: CoverageRow[] = (citiesFixture.cities as CoverageRow[]).m
   verified: Boolean(CITY_CONFIGS[row.city]?.verified),
 }));
 
-export const PROJECT_TYPES: ProjectType[] = typesFixture.types as ProjectType[];
+export const PROJECT_TYPES: ProjectType[] = (typesFixture.types as ProjectType[]).map((t) =>
+  // Team 1's real ADU pack decides whether the ADU type is verified; the rest
+  // stay as the fixture lists them, which is to say not verified.
+  t.type === "adu" ? { ...t, verified: Boolean((typeAdu as { verified?: boolean }).verified) } : t,
+);
 
 export const PACKET_FILES: PacketFile[] = packetFixture.files as PacketFile[];
 

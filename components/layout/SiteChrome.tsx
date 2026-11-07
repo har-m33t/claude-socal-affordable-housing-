@@ -33,7 +33,7 @@ export function SiteHeader() {
             {n.label}
           </Link>
         ))}
-        {DATA_MODE === "mock" && <span className="mock-tag ml-2">MOCK DATA</span>}
+        {DATA_MODE !== "live" && <span className="mock-tag ml-2">SCRIPTED RUN</span>}
       </nav>
     </header>
   );
