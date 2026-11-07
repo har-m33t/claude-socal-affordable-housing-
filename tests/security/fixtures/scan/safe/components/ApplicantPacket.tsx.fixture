@@ -1,0 +1,3 @@
+export function ApplicantPacket({ name }: { name: string }) {
+  return <section aria-label="Made-up applicant packet">{name}</section>;
+}

@@ -1,0 +1,4 @@
+"use server";
+export async function saveDraft(form: FormData) {
+  return form.get("draft");
+}

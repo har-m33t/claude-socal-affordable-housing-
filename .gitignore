@@ -14,24 +14,54 @@ data/raw/*
 # Office temp files
 ~$*
 
-# Env / secrets
+# Env / secrets (keys live in the environment only; .env.example lists names, no values)
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+
+# Never commit personal information (real applicants, tenants, residents)
+real-data/
+private/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
 
 # Hackathon bundle: contents of claude-impact-lab-uci-main.zip.
 # Unpacked locally for reference; the zip is the tracked copy, so every
 # extracted file stays untracked. Re-extract with:
 #   unzip -q claude-impact-lab-uci-main.zip -d .
 claude-impact-lab-uci-main/
+node_modules
+
+
+
+
+# Env / secrets
+
 
 # Pointer app (Next.js). Moved from pointer/ to the repo root at integration.
-node_modules
-.next/
-next-env.d.ts
-*.tsbuildinfo
 # Team 1 downloads source PDFs here; never committed.
-data/raw/*
-!data/raw/.gitkeep
 # .env.* above would swallow this, and it is names only - keep it tracked.
-!.env.example
 
+
+
+
+
+
+
+# Next.js / Node
+__pycache__/
+*.pyc
