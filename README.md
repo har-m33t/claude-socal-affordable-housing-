@@ -98,6 +98,7 @@ claim about the law reaches the screen without a source.
 | Prompt injection in uploaded files or city PDFs | Document text is wrapped and marked as untrusted data, and the system prompt says to ignore instructions inside documents. Only five tools exist, every argument is schema-checked, and item IDs must exist in the loaded city file | `tests/security/injection.test.ts`, which uses a planted "ignore your rules" PDF |
 | Agent acting outside the app | No submit, email, SMS, portal or webhook code exists. A static scan fails the build if any appears, or if a new API route is added without review | `tests/security/no-send.test.ts` |
 | Advice for cities nobody has checked | A city whose config says `verified: false` gets "not yet verified" and no advice. Claude is not even called | `tests/security/unverified-city.test.ts` |
+| Real personal data committed | Only made-up people are used. A check over `data/`, `fixtures/` and `contracts/` fails on any real-looking email or APN | `tests/security/no-personal-data.test.ts` |
 | API key leak | The key is in the server environment only. `.env*` is git-ignored. Gitleaks ran on the full history on 2026-11-07 and found no leaks | `npm run scan:secrets` |
 | Supply chain | Exact versions and a lockfile. No unreviewed packages added late | `package-lock.json` |
 
@@ -141,11 +142,21 @@ below with your own check dates.**
 
 ## Where it gets things wrong
 
-- **Redaction is best-effort.** It uses patterns and a name list, not a trained model. It can miss
-  a name that has no label ("Owner:", "Applicant:"), isn't in the name list, and wasn't typed in by
-  the homeowner. It can miss addresses written without a house number or street suffix, and
-  handwriting in scanned images (it reads text only). The before-and-after panel is there so a
-  person can check what goes out.
+- **Redaction is best-effort.** It uses patterns and a name list, not a trained model. The
+  before-and-after panel is there so a person can check what goes out.
+  - It misses a name with no label ("Owner:", "Applicant:"), no honorific and no common first
+    name, unless the homeowner typed it in. Example: "talked to Okonkwo yesterday".
+  - It misses addresses without a house number or street suffix, phone numbers without an area
+    code, unlabelled 8-digit APNs, and other identifiers such as birth dates or license numbers.
+  - It reads text only, so it misses anything in a scanned image.
+  - It over-redacts:
+    - Any `###-###-##` number is treated as an APN.
+    - Once a name is found, its parts are hidden everywhere: "Testwood Construction" becomes
+      "[NAME_3] Construction".
+  - When a value appears with different spellings (for example "MARIA EJEMPLO" and "Maria
+    Ejemplo"), filling drafts back in uses the first spelling.
+- **The upload check is not a malware scanner.** It confirms a file really is a PDF, PNG or JPEG.
+  A valid PDF can still be hostile, which is why the viewer runs with PDF scripting off.
 - **Scanned PDFs** without a text layer give no text, so they cannot be read or redacted. Pointer
   says so instead of guessing.
 - **Law Lens** knows only the mappings in `statutes.json` and the handbook's citations. If a city
