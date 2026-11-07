@@ -106,15 +106,20 @@ export function checkUnverifiedCityRun(
  * Every city not explicitly verified has `verified: false`; every verified city has
  * a checked_date (YYYY-MM-DD) and at least one source.
  */
+/** City id as used in file names: "Rancho Santa Margarita" -> "rancho-santa-margarita". */
+export const citySlug = (name: string): string =>
+  name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
 export function checkCityData(cities: CityConfig[], verifiedAllowlist: readonly string[]): string[] {
   const violations: string[] = [];
+  const allowed = new Set(verifiedAllowlist.map(citySlug));
   for (const city of cities) {
     const name = String(city.city);
     if (typeof city.verified !== "boolean") {
       violations.push(`${name}: verified must be a boolean, got ${JSON.stringify(city.verified)}`);
       continue;
     }
-    if (city.verified && !verifiedAllowlist.includes(name)) {
+    if (city.verified && !allowed.has(citySlug(name))) {
       violations.push(`${name}: verified is true but the city is not on the verified allowlist (${verifiedAllowlist.join(", ")})`);
     }
     if (city.verified) {

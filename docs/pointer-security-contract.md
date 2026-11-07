@@ -52,7 +52,7 @@ Run them with `npm run test:security`.
   - Every other city file has `verified: false`, as a boolean. Files starting with `_`, such as
     `_template.json`, are skipped.
 - [ ] Only made-up people. Emails use `@example.com`, phones use 555-0100 to 555-0199, and APNs
-  start with `999-`. `tests/security/no-personal-data.test.ts` fails on anything else.
+  start with `999-` or `000-`. `tests/security/no-personal-data.test.ts` fails on anything else.
 
 ## Team 2: using the redaction module
 
