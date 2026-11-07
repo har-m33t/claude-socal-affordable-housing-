@@ -126,6 +126,21 @@ def check_statutes(path: Path, doc: dict) -> None:
             err(path, f"{s.get('old')}: no source_url")
         if s.get("confirmed") and not s.get("checked_date"):
             err(path, f"{s.get('old')}: confirmed needs checked_date")
+    # Team 3 resolves statute_id on `id` (strictly: an entry with an id stops resolving on
+    # `old`), and the model is forbidden to write statute numbers, so ids must be unique and
+    # must not contain any section number from the table.
+    ids = [s.get("id") for s in entries]
+    if any(ids):
+        if not all(ids):
+            err(path, "either every statute entry has an id or none does")
+        if len(set(ids)) != len(ids):
+            err(path, "statute ids must be unique")
+        numbers = {s.get("old", "") for s in entries} | {
+            part for s in entries for part in str(s.get("new_range", "")).split("-")}
+        for sid in filter(None, ids):
+            for num in (n for n in numbers if len(n) >= 4):  # section numbers, not stray digits
+                if num in sid or num.replace(".", "-") in sid:
+                    err(path, f"statute id {sid!r} contains section number {num}")
     # The contract describes the whole list; the {"about", "statutes": [...]} wrapper is approved (#3).
     schema_check(path, doc.get("statutes", []) if isinstance(doc, dict) else doc, "statute.schema.json")
 
@@ -136,11 +151,19 @@ def check_type(path: Path, t: dict) -> None:
     if t.get("verified") is True:
         if not t.get("checked_date"):
             err(path, "verified type pack needs checked_date")
-        for k in ("statutes", "clocks"):
+        for k, label in (("statute_details", "statute"), ("clocks", "clock")):
             for e in t.get(k, []):
                 if e.get("confirmed") is not True:
-                    err(path, f"verified pack has unconfirmed {k[:-1]} {e.get('section') or e.get('id')}")
-    for s in t.get("statutes", []):
+                    err(path, f"verified pack has unconfirmed {label} {e.get('section') or e.get('id')}")
+    # Team 3's ProjectTypePack reads `statutes` as plain section strings; the detail lives
+    # in `statute_details`, one entry per string, in the same order.
+    sections = t.get("statutes", [])
+    if not all(isinstance(s, str) for s in sections):
+        err(path, "statutes must be a list of section strings (details go in statute_details)")
+    details = t.get("statute_details", [])
+    if [d.get("section") for d in details] != sections:
+        err(path, "statutes must list exactly the sections in statute_details, in order")
+    for s in details:
         if not s.get("source_url"):
             err(path, f"statute {s.get('section')} has no source_url")
 

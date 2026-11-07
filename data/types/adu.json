@@ -10,6 +10,30 @@
     "translations_url": "https://www.hcd.ca.gov/building-standards/adu/handbook"
   },
   "statutes": [
+    "66310-66342",
+    "66314-66331",
+    "66333-66339",
+    "66333(b)"
+  ],
+  "clocks": [
+    {
+      "id": "approve-or-deny",
+      "description": "Permitting agency must approve or deny an application to create or serve an ADU or JADU within 60 days from when a completed application is received, if there is an existing single-family or multifamily dwelling on the lot",
+      "days": 60,
+      "statute": "66317(a)(3)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11",
+      "confirmed": true
+    },
+    {
+      "id": "denial-comments",
+      "description": "On denial, the agency must return in writing a full set of comments listing defective or deficient items and how to remedy them, within 60 days from when a completed application is received",
+      "days": 60,
+      "statute": "66317(b)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11",
+      "confirmed": true
+    }
+  ],
+  "statute_details": [
     {
       "section": "66310-66342",
       "title": "State ADU and JADU law (formerly 65852.2, 65852.22, 65852.23, 65852.26), Handbook p. 13",
@@ -32,24 +56,6 @@
       "section": "66333(b)",
       "title": "JADU owner occupancy: required only if the JADU shares sanitation facilities with the primary structure (2025 change), Handbook p. 14",
       "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
-      "confirmed": true
-    }
-  ],
-  "clocks": [
-    {
-      "id": "approve-or-deny",
-      "description": "Permitting agency must approve or deny an application to create or serve an ADU or JADU within 60 days from when a completed application is received, if there is an existing single-family or multifamily dwelling on the lot",
-      "days": 60,
-      "statute": "66317(a)(3)",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11",
-      "confirmed": true
-    },
-    {
-      "id": "denial-comments",
-      "description": "On denial, the agency must return in writing a full set of comments listing defective or deficient items and how to remedy them, within 60 days from when a completed application is received",
-      "days": 60,
-      "statute": "66317(b)",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11",
       "confirmed": true
     }
   ]
