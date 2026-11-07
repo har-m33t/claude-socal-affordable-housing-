@@ -67,3 +67,10 @@ node_modules
 # Next.js / Node
 __pycache__/
 *.pyc
+.vercel
+.env*
+# Re-asserted AFTER the Vercel CLI's `.env*` above, because later patterns win.
+# .env.example holds variable NAMES only and must stay tracked; without this it
+# would be silently dropped if it were ever removed and re-added.
+!.env.example
+
