@@ -1,0 +1,521 @@
+/* Document stage: component styles and keyframes. Imported by DocumentStage only.
+   Tokens come from app/tokens.css; shared motion utilities (.anim-*, .underline-tab)
+   come from the design lane. Every animation here is listed in the header comment of
+   the component that uses it, and is switched off under prefers-reduced-motion. */
+
+/* ---------- layout ---------- */
+.stage {
+  color: var(--fg);
+  background: var(--bg-subtle);
+}
+.stage-pane {
+  position: absolute;
+  inset: 0;
+}
+.stage-pane[hidden] {
+  display: none;
+}
+.stage-scroll {
+  position: relative; /* the pointer layer's coordinate space */
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.stage-content {
+  padding: 20px 24px 48px;
+}
+
+/* ---------- tabs ---------- */
+.stage-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.stage-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 8px;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+.stage-tab[data-active="true"] {
+  color: var(--fg);
+  font-weight: 600;
+}
+.stage-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+.stage-tab-title {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stage-made-up {
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--attention) 45%, transparent);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--attention);
+}
+.stage-counter {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--neutral-subtle);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: center;
+  color: var(--fg);
+}
+.stage-step-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--plan) 40%, transparent);
+  border-radius: 999px;
+  background: var(--plan-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--plan);
+}
+.stage-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--plan);
+}
+
+/* ---------- back to my step ---------- */
+.stage-back-banner {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--answer) 30%, transparent);
+  background: var(--answer-subtle);
+  font-size: 13px;
+}
+.stage-back-banner-q {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--answer);
+  color: var(--fg-on-emphasis);
+  font-size: 11px;
+  font-weight: 700;
+}
+.stage-back-banner-btn,
+.stage-back-pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--answer);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--answer);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.stage-back-banner-btn:hover,
+.stage-back-pill:hover {
+  background: var(--answer-subtle);
+}
+.stage-back-banner-btn:focus-visible,
+.stage-back-pill:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.stage-back-pill {
+  box-shadow: var(--shadow-md);
+  pointer-events: auto; /* the only clickable thing on the pointer layer */
+}
+
+/* ---------- pointer layer ---------- */
+.stage-pointer-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+/* The anchor sits exactly on the target point. Glide = transform transition. */
+.stage-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  transition:
+    transform var(--dur-pointer) var(--ease-out),
+    opacity var(--dur-slow) ease,
+    visibility 0s linear 0s;
+}
+.stage-anchor[data-variant="answer"] {
+  z-index: 1; /* above the plan hand where they overlap */
+}
+.stage-anchor:not([data-shown]) {
+  opacity: 0;
+  visibility: hidden; /* also takes the Back button out of the tab order */
+  transition:
+    opacity var(--dur-slow) ease,
+    visibility 0s linear var(--dur-slow);
+}
+/* The hand body, offset so the fingertip (TIP_X 15, TIP_Y 2) is on the anchor. */
+.stage-hand {
+  position: absolute;
+  left: -15px;
+  top: -2px;
+  width: 52px;
+  height: 60px;
+}
+.stage-hand-tap {
+  transform-origin: 15px 2px;
+  animation: stage-hand-tap 420ms var(--ease-out) var(--dur-pointer) both;
+}
+@keyframes stage-hand-tap {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: translateY(2px) scale(0.86);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.stage-tip-ring {
+  position: absolute;
+  left: 1px;
+  top: -12px;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--plan);
+  border-radius: 999px;
+}
+.stage-hand-chip {
+  position: absolute;
+  left: 44px;
+  top: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
+.stage-hand[data-variant="plan"] .stage-hand-chip {
+  background: var(--plan);
+  color: var(--fg-on-emphasis);
+}
+.stage-hand[data-variant="answer"] .stage-hand-chip {
+  border: 1.5px solid var(--answer);
+  background: var(--bg);
+  color: var(--answer);
+}
+.stage-hand[data-flip] .stage-hand-chip {
+  left: auto;
+  right: 46px;
+}
+.stage-back-anchor {
+  position: absolute;
+  left: 29px;
+  top: 52px;
+}
+.stage-back-anchor[data-flip] {
+  left: auto;
+  right: 4px;
+}
+
+/* ---------- PDF pages and target boxes ---------- */
+.stage-page {
+  position: relative;
+  margin-bottom: 24px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--border-muted), var(--shadow-lg);
+}
+.stage-box {
+  position: absolute;
+  border-radius: 3px;
+  transition:
+    background-color var(--dur-slow) ease,
+    border-color var(--dur-slow) ease,
+    box-shadow var(--dur-slow) ease;
+}
+.stage-box.item-pointed {
+  border-color: color-mix(in srgb, var(--plan) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--plan) 22%, transparent);
+}
+.stage-box.stage-box-answer {
+  border-color: var(--answer);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--answer) 25%, transparent);
+}
+.stage-box:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- file board ---------- */
+.stage-file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.stage-file-grid > li {
+  animation-delay: var(--stagger, 0ms);
+}
+.stage-file-card {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  text-align: left;
+  font-size: 14px;
+  transition:
+    border-color var(--dur-slow) ease,
+    box-shadow var(--dur-slow) ease,
+    transform var(--dur-slow) var(--ease-out);
+}
+button.stage-file-card {
+  cursor: pointer;
+}
+button.stage-file-card:hover {
+  border-color: var(--fg-subtle);
+}
+.stage-file-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.stage-file-card[data-status="complete"] {
+  box-shadow: inset 3px 0 0 var(--success);
+}
+.stage-file-card[data-status="missing"] {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+.stage-file-card[data-status="unknown"] {
+  box-shadow: inset 3px 0 0 var(--neutral);
+}
+.stage-file-card[data-pointed] {
+  border-color: var(--plan);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--plan) 20%, transparent), var(--shadow-md);
+  transform: translateY(-1px);
+}
+.stage-file-card[data-answer] {
+  border-color: var(--answer);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--answer) 22%, transparent), var(--shadow-md);
+}
+.stage-file-card[data-selected] {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+}
+.stage-file-card[data-muted] {
+  background: var(--bg-subtle);
+}
+.stage-file-card[data-added] {
+  border-style: dashed;
+}
+.stage-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--fg-muted);
+}
+.stage-label[data-status="complete"] {
+  border-color: var(--success);
+  color: var(--success);
+}
+.stage-label[data-status="missing"] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.stage-label[data-status="unknown"] {
+  border-color: var(--neutral);
+  color: var(--neutral);
+}
+.stage-label[data-status="lawlens"] {
+  border-color: var(--attention);
+  color: var(--attention);
+}
+.stage-label[data-status="added"] {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--accent);
+}
+.stage-code {
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+/* ---------- controls ---------- */
+.stage-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--fg) 15%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.stage-btn:hover:not(:disabled) {
+  background: var(--bg-muted);
+}
+.stage-btn-primary {
+  background: var(--success-emphasis);
+  color: var(--fg-on-emphasis);
+}
+.stage-btn-primary:hover:not(:disabled) {
+  background: var(--success);
+}
+.stage-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.stage-btn:focus-visible,
+.stage-icon-btn:focus-visible,
+.stage-dropzone:focus-visible,
+.stage-select:focus-visible,
+.stage-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.stage-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+}
+.stage-icon-btn:hover {
+  background: var(--bg-muted);
+}
+.stage-link {
+  color: var(--accent);
+  font-size: 12px;
+}
+.stage-link:hover {
+  text-decoration: underline;
+}
+.stage-select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-size: 14px;
+}
+.stage-select:disabled {
+  background: var(--bg-subtle);
+  color: var(--fg-subtle);
+}
+.stage-dropzone {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  font-weight: 500;
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease;
+}
+.stage-dropzone:hover {
+  border-color: var(--accent);
+}
+.stage-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(560px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow-lg);
+}
+.stage-drawer::backdrop {
+  background: rgba(31, 35, 40, 0.4);
+}
+
+/* ---------- reduced motion: hands jump, nothing bounces or slides ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .stage-anchor {
+    transition:
+      opacity var(--dur-fast) ease,
+      visibility 0s linear 0s;
+  }
+  .stage-anchor:not([data-shown]) {
+    transition:
+      opacity var(--dur-fast) ease,
+      visibility 0s linear var(--dur-fast);
+  }
+  .stage-hand-tap {
+    animation: none;
+  }
+  .stage-box,
+  .stage-file-card {
+    transition: none;
+  }
+  .stage-file-card[data-pointed] {
+    transform: none;
+  }
+}
