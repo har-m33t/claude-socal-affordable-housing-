@@ -10,10 +10,12 @@ import { readFileSync } from "node:fs";
 import * as nodePath from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { readApiKey, readCaps } from "../../lib/agent/config";
+import { POST } from "../../app/api/agent/route";
+import { readApiKey, readCaps, readRateLimit, recordingEnabled } from "../../lib/agent/config";
 import type { AgentRunDeps, AnthropicClientLike, ToolsLike, VerifierLike } from "../../lib/agent/loop";
 import { runAgent } from "../../lib/agent/loop";
 import { buildSystemBlocks, buildUserContent, UNTRUSTED_OPEN } from "../../lib/agent/prompt";
+import { clientKey, createRateLimiter, resetRateLimiter } from "../../lib/agent/ratelimit";
 import { formatFrame, SSE_HEADERS, toSSEStream } from "../../lib/agent/sse";
 import type {
   AgentEvent,
@@ -171,8 +173,28 @@ afterEach(() => {
   delete process.env.POINTER_MAX_STEPS;
   delete process.env.POINTER_MAX_TOKENS;
   delete process.env.POINTER_HANDBOOK_PDF;
+  delete process.env.POINTER_ALLOW_RECORD;
+  delete process.env.POINTER_RATE_LIMIT_MAX;
+  delete process.env.POINTER_RATE_LIMIT_WINDOW_MS;
+  resetRateLimiter();
   vi.unstubAllEnvs();
 });
+
+/** POST the real route handler. Returns the Response; the SSE body is lazy. */
+async function post(body: unknown, headers: Record<string, string> = {}): Promise<Response> {
+  const res = await POST(
+    new Request("http://localhost:3000/api/agent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
+    }),
+  );
+  // Nothing has run yet - the stream is pull-based - but close it anyway.
+  if (res.body !== null && res.headers.get("Content-Type")?.includes("event-stream") === true) {
+    await res.body.cancel();
+  }
+  return res;
+}
 
 // =========================================================== the hard gate
 
@@ -724,6 +746,7 @@ describe("the API key", () => {
       "lib/agent/loop.ts",
       "lib/agent/sse.ts",
       "lib/agent/prompt.ts",
+      "lib/agent/ratelimit.ts",
       "app/api/agent/route.ts",
     ];
     const allowed = new Set([
@@ -731,6 +754,10 @@ describe("the API key", () => {
       "POINTER_MAX_STEPS",
       "POINTER_MAX_TOKENS",
       "POINTER_HANDBOOK_PDF",
+      "POINTER_ALLOW_RECORD",
+      "POINTER_RATE_LIMIT_MAX",
+      "POINTER_RATE_LIMIT_WINDOW_MS",
+      "NODE_ENV",
     ]);
     let keyReads = 0;
     for (const file of files) {
@@ -850,5 +877,181 @@ describe("the system prompt", () => {
     const text = (content[content.length - 1] as { text: string }).text;
     // Exactly one closing marker: the real one.
     expect(text.split("</untrusted-document>").length - 1).toBe(1);
+  });
+});
+
+// ========================================================= recording is ours
+
+describe("recording is server-side only", () => {
+  it("rejects a body carrying record as an unknown key, rather than ignoring it", async () => {
+    const res = await post({
+      city: "fixture-city",
+      projectType: "adu",
+      question: "q",
+      record: true,
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string; issues: Array<{ path: string }> };
+    expect(body.error).toBe("invalid_request");
+    expect(body.issues.some((i) => i.path === "record" || i.path === "")).toBe(true);
+  });
+
+  it("also rejects record: false - the field simply does not exist", async () => {
+    const res = await post({
+      city: "fixture-city",
+      projectType: "adu",
+      question: "q",
+      record: false,
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("constructs no recorder when record is not set", async () => {
+    const recorder = vi.fn();
+    const stub = stubClient([message("end_turn")]);
+    await collect(
+      runAgent(
+        request(),
+        liveDeps({
+          createClient: async () => stub.client,
+          recorder: recorder as unknown as AgentRunDeps["recorder"],
+        }),
+      ),
+    );
+    expect(recorder).not.toHaveBeenCalled();
+  });
+
+  it("is off unless the operator sets POINTER_ALLOW_RECORD=1 outside production", () => {
+    expect(recordingEnabled()).toBe(false);
+    process.env.POINTER_ALLOW_RECORD = "1";
+    expect(recordingEnabled()).toBe(true);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(recordingEnabled()).toBe(false);
+  });
+
+  it("does not treat any other POINTER_ALLOW_RECORD value as on", () => {
+    for (const value of ["true", "yes", "0", "", "TRUE"]) {
+      process.env.POINTER_ALLOW_RECORD = value;
+      expect(recordingEnabled(), `value: ${JSON.stringify(value)}`).toBe(false);
+    }
+  });
+});
+
+// ============================================================= rate limiting
+
+describe("the rate limiter", () => {
+  it("allows up to max runs then refuses, with the time left in the window", () => {
+    let clock = 1_000;
+    const limiter = createRateLimiter({ max: 3, windowMs: 60_000, now: () => clock });
+
+    expect(limiter.check("ip:a")).toEqual({ ok: true, remaining: 2, retryAfterMs: 0 });
+    clock += 500;
+    expect(limiter.check("ip:a")).toEqual({ ok: true, remaining: 1, retryAfterMs: 0 });
+    clock += 500;
+    expect(limiter.check("ip:a")).toEqual({ ok: true, remaining: 0, retryAfterMs: 0 });
+    clock += 500;
+    // Window opened at t=1000 and closes at t=61000; the clock now reads 2500.
+    expect(limiter.check("ip:a")).toEqual({ ok: false, remaining: 0, retryAfterMs: 58_500 });
+  });
+
+  it("resets when the window elapses", () => {
+    let clock = 0;
+    const limiter = createRateLimiter({ max: 1, windowMs: 1_000, now: () => clock });
+
+    expect(limiter.check("ip:a").ok).toBe(true);
+    expect(limiter.check("ip:a").ok).toBe(false);
+    clock = 999;
+    expect(limiter.check("ip:a").ok).toBe(false);
+    clock = 1_000; // the window is closed at exactly resetAt
+    expect(limiter.check("ip:a")).toEqual({ ok: true, remaining: 0, retryAfterMs: 0 });
+    clock = 1_500;
+    expect(limiter.check("ip:a").ok).toBe(false);
+  });
+
+  it("keeps separate buckets per client", () => {
+    const limiter = createRateLimiter({ max: 1, windowMs: 60_000, now: () => 0 });
+    expect(limiter.check("ip:a").ok).toBe(true);
+    expect(limiter.check("ip:b").ok).toBe(true);
+    expect(limiter.check("ip:a").ok).toBe(false);
+    expect(limiter.check("ip:b").ok).toBe(false);
+  });
+
+  it("keys on x-forwarded-for, then x-real-ip, then one shared bucket", () => {
+    expect(clientKey(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" }))).toBe(
+      "ip:203.0.113.7",
+    );
+    expect(clientKey(new Headers({ "x-real-ip": "203.0.113.9" }))).toBe("ip:203.0.113.9");
+    expect(
+      clientKey(new Headers({ "x-forwarded-for": "  ", "x-real-ip": "203.0.113.9" })),
+    ).toBe("ip:203.0.113.9");
+    // No proxy headers: one shared bucket, not an unlimited allowance each.
+    expect(clientKey(new Headers())).toBe("shared");
+  });
+
+  it("defaults to 5 live runs per 60s and honours the env overrides", () => {
+    expect(readRateLimit()).toEqual({ max: 5, windowMs: 60_000 });
+    process.env.POINTER_RATE_LIMIT_MAX = "2";
+    process.env.POINTER_RATE_LIMIT_WINDOW_MS = "5000";
+    expect(readRateLimit()).toEqual({ max: 2, windowMs: 5_000 });
+    process.env.POINTER_RATE_LIMIT_MAX = "junk";
+    expect(readRateLimit()).toEqual({ max: 5, windowMs: 5_000 });
+  });
+});
+
+describe("the route's rate limit", () => {
+  const live = { city: "fixture-city", projectType: "adu", question: "q" };
+  const headers = { "x-forwarded-for": "198.51.100.4" };
+
+  beforeEach(() => {
+    process.env.POINTER_RATE_LIMIT_MAX = "2";
+    resetRateLimiter();
+  });
+
+  it("answers 429 with Retry-After once the window is spent", async () => {
+    expect((await post(live, headers)).status).toBe(200);
+    expect((await post(live, headers)).status).toBe(200);
+
+    const refused = await post(live, headers);
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get("Retry-After")).toBe("60");
+    const body = (await refused.json()) as {
+      error: string;
+      message: string;
+      retry_after_ms: number;
+    };
+    expect(body.error).toBe("rate_limited");
+    expect(body.retry_after_ms).toBeGreaterThan(0);
+    expect(body.message).toContain("replay");
+  });
+
+  it("limits each client separately", async () => {
+    expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(200);
+    expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(200);
+    expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(429);
+    // A different client still has its full allowance.
+    expect((await post(live, { "x-forwarded-for": "198.51.100.2" })).status).toBe(200);
+  });
+
+  it("never rate-limits a replay run", async () => {
+    const replay = { ...live, replay: true };
+    for (let i = 0; i < 10; i += 1) {
+      expect((await post(replay, headers)).status).toBe(200);
+    }
+    // ...and a replay run does not consume the live allowance either.
+    expect((await post(live, headers)).status).toBe(200);
+  });
+
+  it("does not spend the allowance on a request that never reaches the agent", async () => {
+    expect((await post({ city: "", projectType: "adu", question: "q" }, headers)).status).toBe(400);
+    expect((await post(live, headers)).status).toBe(200);
+    expect((await post(live, headers)).status).toBe(200);
+    expect((await post(live, headers)).status).toBe(429);
+  });
+
+  it("answers 503 before spending the allowance when there is no key", async () => {
+    process.env.ANTHROPIC_API_KEY = "";
+    const res = await post(live, headers);
+    expect(res.status).toBe(503);
+    expect(((await res.json()) as { error: string }).error).toBe("no_api_key");
   });
 });
