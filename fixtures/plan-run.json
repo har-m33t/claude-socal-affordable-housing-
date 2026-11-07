@@ -1,0 +1,466 @@
+{
+  "about": "Scripted run of data/plans/anaheim-adu.json over Anaheim's REAL documents (checklist Z412, ADU Express Application, impact fees B802) and the MADE-UP applicant packet. No model is called. Terse on purpose: explanations come only when the user asks. Statuses follow data/packet/manifest.json: the meter spot report and the site plan are absent. draft_field values come only from data/packet/applicant.json, except 'Plan 002', '499' and '1' (floor plan, square feet, bedrooms), which are a MADE-UP choice of Anaheim's pre-approved Plan 002 (1 bed, 499 sf, per data/cities/anaheim.json fast_paths). statute_ref values are copied from confirmed data/statutes.json entries.",
+  "events": [
+    {
+      "tool": "point_to",
+      "item_id": "file-sewer-capacity-email",
+      "ts": "2026-11-07T21:00:01Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "file-sewer-capacity-email",
+      "status": "complete",
+      "text": "Sewer verification email",
+      "ts": "2026-11-07T21:00:02Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "file-new-address-request",
+      "ts": "2026-11-07T21:00:03Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "file-new-address-request",
+      "status": "complete",
+      "text": "New address request form",
+      "ts": "2026-11-07T21:00:04Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "file-floor-plan",
+      "ts": "2026-11-07T21:00:05Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "file-floor-plan",
+      "status": "unknown",
+      "text": "Type not declared",
+      "ts": "2026-11-07T21:00:06Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "z412-overview",
+      "ts": "2026-11-07T21:00:07Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "adu-express-program",
+      "ts": "2026-11-07T21:00:08Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "adu-express-program",
+      "status": "unknown",
+      "text": "Eligibility not checked yet",
+      "ts": "2026-11-07T21:00:09Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-project-address",
+      "ts": "2026-11-07T21:00:10Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-project-address",
+      "text": "1234 Placeholder Lane, Anaheim, CA 00000",
+      "ts": "2026-11-07T21:00:11Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-adu-address",
+      "ts": "2026-11-07T21:00:12Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-adu-address",
+      "status": "unknown",
+      "text": "Not assigned yet",
+      "ts": "2026-11-07T21:00:13Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-applicant-name",
+      "ts": "2026-11-07T21:00:14Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-applicant-name",
+      "text": "Maria Ejemplo",
+      "ts": "2026-11-07T21:00:15Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-applicant-company",
+      "ts": "2026-11-07T21:00:16Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-applicant-company",
+      "status": "unknown",
+      "text": "None in your files",
+      "ts": "2026-11-07T21:00:17Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-applicant-phone",
+      "ts": "2026-11-07T21:00:18Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-applicant-phone",
+      "text": "714-555-0142",
+      "ts": "2026-11-07T21:00:19Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-applicant-email",
+      "ts": "2026-11-07T21:00:20Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-applicant-email",
+      "text": "maria.ejemplo@example.com",
+      "ts": "2026-11-07T21:00:21Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-applicant-mailing-address",
+      "ts": "2026-11-07T21:00:22Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-applicant-mailing-address",
+      "text": "1234 Placeholder Lane",
+      "ts": "2026-11-07T21:00:23Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-applicant-city",
+      "ts": "2026-11-07T21:00:24Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-applicant-city",
+      "text": "Anaheim",
+      "ts": "2026-11-07T21:00:25Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-applicant-zip",
+      "ts": "2026-11-07T21:00:26Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-applicant-zip",
+      "text": "00000",
+      "ts": "2026-11-07T21:00:27Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-owner-name",
+      "ts": "2026-11-07T21:00:28Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-owner-name",
+      "text": "Maria Ejemplo and Daniel Ejemplo",
+      "ts": "2026-11-07T21:00:29Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-owner-company",
+      "ts": "2026-11-07T21:00:30Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-owner-company",
+      "status": "unknown",
+      "text": "None in your files",
+      "ts": "2026-11-07T21:00:31Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-owner-phone",
+      "ts": "2026-11-07T21:00:32Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-owner-phone",
+      "text": "714-555-0142",
+      "ts": "2026-11-07T21:00:33Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-owner-email",
+      "ts": "2026-11-07T21:00:34Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-owner-email",
+      "text": "maria.ejemplo@example.com",
+      "ts": "2026-11-07T21:00:35Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-owner-mailing-address",
+      "ts": "2026-11-07T21:00:36Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-owner-mailing-address",
+      "text": "1234 Placeholder Lane",
+      "ts": "2026-11-07T21:00:37Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-owner-city",
+      "ts": "2026-11-07T21:00:38Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-owner-city",
+      "text": "Anaheim",
+      "ts": "2026-11-07T21:00:39Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-owner-zip",
+      "ts": "2026-11-07T21:00:40Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-owner-zip",
+      "text": "00000",
+      "ts": "2026-11-07T21:00:41Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-existing-sqft",
+      "ts": "2026-11-07T21:00:42Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-existing-sqft",
+      "status": "missing",
+      "text": "Not in your files",
+      "ts": "2026-11-07T21:00:43Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-existing-bedrooms",
+      "ts": "2026-11-07T21:00:44Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-existing-bedrooms",
+      "status": "missing",
+      "text": "Not in your files",
+      "ts": "2026-11-07T21:00:45Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-existing-bathrooms",
+      "ts": "2026-11-07T21:00:46Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-existing-bathrooms",
+      "status": "missing",
+      "text": "Not in your files",
+      "ts": "2026-11-07T21:00:47Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-floor-plan",
+      "ts": "2026-11-07T21:00:48Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-floor-plan",
+      "text": "Plan 002",
+      "ts": "2026-11-07T21:00:49Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-elevation-style",
+      "ts": "2026-11-07T21:00:50Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-elevation-style",
+      "status": "unknown",
+      "text": "Not chosen yet",
+      "ts": "2026-11-07T21:00:51Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-adu-sqft",
+      "ts": "2026-11-07T21:00:52Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-adu-sqft",
+      "text": "499",
+      "ts": "2026-11-07T21:00:53Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-adu-bedrooms",
+      "ts": "2026-11-07T21:00:54Z"
+    },
+    {
+      "tool": "draft_field",
+      "item_id": "express-adu-bedrooms",
+      "text": "1",
+      "ts": "2026-11-07T21:00:55Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-applicant-signature",
+      "ts": "2026-11-07T21:00:56Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-applicant-signature",
+      "status": "missing",
+      "text": "Sign and date before submitting",
+      "ts": "2026-11-07T21:00:57Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "express-owner-signature",
+      "ts": "2026-11-07T21:00:58Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "express-owner-signature",
+      "status": "missing",
+      "text": "Sign and date before submitting",
+      "ts": "2026-11-07T21:00:59Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "sewer-capacity-verification",
+      "ts": "2026-11-07T21:01:00Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "sewer-capacity-verification",
+      "status": "complete",
+      "text": "Found sewer-capacity-email.pdf",
+      "ts": "2026-11-07T21:01:01Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "meter-spot-report",
+      "ts": "2026-11-07T21:01:02Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "meter-spot-report",
+      "status": "missing",
+      "text": "No meter spot report in your files",
+      "ts": "2026-11-07T21:01:03Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "new-address-request",
+      "ts": "2026-11-07T21:01:04Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "new-address-request",
+      "status": "missing",
+      "text": "Form found; site plan missing",
+      "ts": "2026-11-07T21:01:05Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "jadu-owner-occupancy-covenant",
+      "ts": "2026-11-07T21:01:06Z"
+    },
+    {
+      "tool": "highlight",
+      "item_id": "jadu-owner-occupancy-covenant",
+      "text": "Cites an old section number",
+      "statute_ref": {
+        "id": "adu-renumbered-sb477",
+        "old": "65852.2",
+        "new_range": "66310-66342",
+        "title": "ADU law. SB 477 (Ch. 7, Stats. 2024): 'updated from 65852.2, 65852.22, 65852.23, and 65852.26 to Government Code sections 66310-66342' (Handbook p. 13)",
+        "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+        "checked_date": "2026-11-07"
+      },
+      "ts": "2026-11-07T21:01:07Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "jadu-owner-occupancy-covenant",
+      "status": "unknown",
+      "text": "For JADUs; your project has none",
+      "ts": "2026-11-07T21:01:08Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "b802-adu-impact-fees",
+      "ts": "2026-11-07T21:01:09Z"
+    },
+    {
+      "tool": "highlight",
+      "item_id": "b802-adu-impact-fees",
+      "text": "Cites an old section number",
+      "statute_ref": {
+        "id": "adu-impact-fees-renumbered-2025",
+        "old": "66324",
+        "new_range": "66311.5",
+        "title": "2025 renumbering (Handbook p. 14). 66311.5 covers ADU/JADU impact fees, e.g. no impact fee on an ADU of 750 sf or less (p. 15)",
+        "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
+        "checked_date": "2026-11-07"
+      },
+      "ts": "2026-11-07T21:01:10Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "b802-adu-impact-fees",
+      "status": "unknown",
+      "text": "May be out of date; confirm with city",
+      "ts": "2026-11-07T21:01:11Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "jadu-title-report",
+      "ts": "2026-11-07T21:01:12Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "jadu-title-report",
+      "status": "unknown",
+      "text": "For JADUs only; not needed here",
+      "ts": "2026-11-07T21:01:13Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "jadu-grant-deed",
+      "ts": "2026-11-07T21:01:14Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "jadu-grant-deed",
+      "status": "unknown",
+      "text": "For JADUs only; not needed here",
+      "ts": "2026-11-07T21:01:15Z"
+    },
+    {
+      "tool": "point_to",
+      "item_id": "packet-summary",
+      "ts": "2026-11-07T21:01:16Z"
+    },
+    {
+      "tool": "mark_item",
+      "item_id": "packet-summary",
+      "status": "missing",
+      "text": "Missing: meter spot report, site plan",
+      "ts": "2026-11-07T21:01:17Z"
+    }
+  ]
+}

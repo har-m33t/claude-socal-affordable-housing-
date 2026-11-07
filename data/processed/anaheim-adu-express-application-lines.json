@@ -1,0 +1,517 @@
+{
+ "source_file": "anaheim-adu-express-application.pdf",
+ "page_count": 1,
+ "box_units": "PDF points, top-left origin, [x, y, w, h]",
+ "lines": [
+  {
+   "page": 1,
+   "text": "City of Anaheim | 200 S. Anaheim Blvd., Suite 162 City ADU EXPRESS APPLICATION",
+   "box": [
+    38.5,
+    59,
+    496.3,
+    22.9
+   ]
+  },
+  {
+   "page": 1,
+   "text": "PROJECT INFORMATION:",
+   "box": [
+    48.8,
+    90.1,
+    111.6,
+    11
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Project Address:",
+   "box": [
+    48.8,
+    103.5,
+    67.9,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Accessory Dwelling Unit Address:",
+   "box": [
+    48.8,
+    125.6,
+    138.2,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "APPLICANT INFORMATION:",
+   "box": [
+    48.8,
+    148,
+    122.7,
+    11
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Applicant Name:",
+   "box": [
+    48.8,
+    161.6,
+    69.4,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Company Name:",
+   "box": [
+    290,
+    161.6,
+    68.9,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Phone No:",
+   "box": [
+    48.8,
+    183.5,
+    43.5,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "E-mail Address:",
+   "box": [
+    236,
+    183.5,
+    64.3,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Mailing Address:",
+   "box": [
+    48.8,
+    208.1,
+    68,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "City:",
+   "box": [
+    381.8,
+    208.1,
+    18.2,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Zip Code:",
+   "box": [
+    459,
+    208.1,
+    37.9,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "I hereby certify, under penalty of perjury, that all of the foregoing information is true and correct and acknowledge that any",
+   "box": [
+    48.8,
+    245,
+    499.6,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "false or misleading information shall be grounds for denial of this application. Furthermore, I agree to fully reimburse the City",
+   "box": [
+    48.8,
+    257.2,
+    506,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "for the full cost of processing this application.",
+   "box": [
+    48.8,
+    269.5,
+    183.6,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Signature:____________________________________________ Date: ______________________",
+   "box": [
+    48.8,
+    294,
+    427.5,
+    10.5
+   ]
+  },
+  {
+   "page": 1,
+   "text": "PROPERTY OWNER INFORMATION:",
+   "box": [
+    48.8,
+    313.6,
+    157.8,
+    11
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Property Owner:",
+   "box": [
+    48.8,
+    327,
+    68.2,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Company Name (if applicable):",
+   "box": [
+    290,
+    327,
+    125,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Phone No:",
+   "box": [
+    48.8,
+    348.8,
+    42.7,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "E-mail Address:",
+   "box": [
+    236,
+    348.8,
+    62.9,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Mailing Address:",
+   "box": [
+    48.8,
+    370.7,
+    68,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "City:",
+   "box": [
+    381.8,
+    370.7,
+    18.2,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Zip Code:",
+   "box": [
+    459,
+    370.7,
+    37.9,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Total Square Footage of Existing Primary Dwelling:",
+   "box": [
+    48.8,
+    392.6,
+    204.6,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Total Existing Bedrooms:",
+   "box": [
+    48.8,
+    414.4,
+    100.6,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Total Existing Bathrooms:",
+   "box": [
+    300.8,
+    414.4,
+    103.8,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "PROPOSED ACCESSORY DWELLING UNIT:",
+   "box": [
+    48.8,
+    436.5,
+    182.6,
+    11
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Floor Plan Selected:",
+   "box": [
+    48.8,
+    449.9,
+    80.1,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Elevation Style:",
+   "box": [
+    290,
+    449.9,
+    62.6,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Total Square Footage:",
+   "box": [
+    48.8,
+    471.8,
+    88.9,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Number of Bedrooms:",
+   "box": [
+    290,
+    471.8,
+    90.5,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "I have read and understand the obligations regarding the filing and processing of the attached application. Further, the",
+   "box": [
+    48.8,
+    505.8,
+    481.5,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "information submitted as part of this application, including statements and answers contained herein, are in all respects true",
+   "box": [
+    48.8,
+    518,
+    504.3,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "and correct. I HEREBY CERTIFY that I am the legal property owner of record or his/her authorized representative and acknowledge",
+   "box": [
+    48.8,
+    530.3,
+    508,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "and authorize the person(s) named above as applicant and agent to represent me and bind me in all matters concerning this",
+   "box": [
+    48.8,
+    542.4,
+    477.2,
+    9.5
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Accessory Dwelling Unit Permit. I approve of the action requested.",
+   "box": [
+    48.8,
+    554,
+    262.9,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Signature:___________________________________________",
+   "box": [
+    48.8,
+    585.6,
+    269.4,
+    10.5
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Date: ______________________",
+   "box": [
+    334.9,
+    585.6,
+    140.9,
+    10.5
+   ]
+  },
+  {
+   "page": 1,
+   "text": "FOR CITY USE ONLY:",
+   "box": [
+    261.8,
+    624.5,
+    88.2,
+    11
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Date Submitted:",
+   "box": [
+    48.8,
+    637.8,
+    65.2,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Zoning:",
+   "box": [
+    290,
+    637.8,
+    29.5,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "General Plan:",
+   "box": [
+    423.5,
+    637.8,
+    53.3,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "APN:",
+   "box": [
+    48.8,
+    662.5,
+    19.8,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Pre-Submittal Checklist Complete:",
+   "box": [
+    290,
+    662.5,
+    135.4,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "APPLICATION STATUS:",
+   "box": [
+    257,
+    684.6,
+    97.7,
+    11
+   ]
+  },
+  {
+   "page": 1,
+   "text": "□ Approved",
+   "box": [
+    86.9,
+    696.7,
+    53.9,
+    20.1
+   ]
+  },
+  {
+   "page": 1,
+   "text": "□ Approved with Corrections (See attached)",
+   "box": [
+    219.1,
+    696.7,
+    171.3,
+    20.1
+   ]
+  },
+  {
+   "page": 1,
+   "text": "□ Denied",
+   "box": [
+    468.5,
+    696.7,
+    44,
+    20.1
+   ]
+  },
+  {
+   "page": 1,
+   "text": "City of Anaheim |200 S. Anaheim Blvd., Suite 162, Anaheim, CA 92805 | (714) 765-5139 | www.anaheim.net/ADUAnaheim",
+   "box": [
+    57.7,
+    740.1,
+    505.7,
+    10
+   ]
+  },
+  {
+   "page": 1,
+   "text": "Revised 10/2/2025",
+   "box": [
+    491.2,
+    763.3,
+    61.5,
+    8
+   ]
+  }
+ ]
+}
