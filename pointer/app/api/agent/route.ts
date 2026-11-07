@@ -109,15 +109,19 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  // Only live runs spend tokens, so only live runs are rate limited.
+  // Only live runs spend tokens, so only live runs are rate limited. Two caps
+  // are checked: the whole app's ceiling first, then this client's own.
   if (live) {
     const decision = requestRateLimiter().check(clientKey(request.headers));
     if (!decision.ok) {
       const seconds = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
+      const atGlobalCeiling = decision.scope === "global";
       return new Response(
         JSON.stringify({
-          error: "rate_limited",
-          message: `Too many live agent runs. Try again in about ${seconds}s, or send { replay: true } for a recorded run.`,
+          error: atGlobalCeiling ? "rate_limited_global" : "rate_limited",
+          message: atGlobalCeiling
+            ? `This app is at its ceiling for live agent runs across all callers. Try again in about ${seconds}s, or send { replay: true } for a recorded run.`
+            : `Too many live agent runs. Try again in about ${seconds}s, or send { replay: true } for a recorded run.`,
           retry_after_ms: decision.retryAfterMs,
         }),
         {
