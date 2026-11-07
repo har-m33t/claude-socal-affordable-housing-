@@ -69,6 +69,8 @@ def check_city(path: Path, c: dict) -> None:
     for s in c.get("sources", []):
         if not str(s.get("url", "")).startswith("https://"):
             err(path, f"source without https url: {s.get('title')}")
+        if c.get("checklist") and not s.get("checked_date"):
+            err(path, f"source without checked_date: {s.get('title')}")
     for fp in c.get("fast_paths", []):
         if not fp.get("source"):
             err(path, f"fast path {fp.get('id')} has no source")
@@ -105,23 +107,43 @@ def check_type(path: Path, t: dict) -> None:
             err(path, f"statute {s.get('section')} has no source_url")
 
 
-def check_packet(path: Path, p: dict) -> None:
+def check_flags(path: Path, doc: dict, cities: dict[str, dict]) -> None:
+    for f in doc.get("flags", []):
+        fid = f.get("id")
+        for k in ("city_says", "current", "city_source", "state_source", "checked_date"):
+            if not f.get(k):
+                err(path, f"{fid}: missing {k}")
+        city = cities.get(f.get("city"))
+        if city is None:
+            err(path, f"{fid}: unknown city {f.get('city')}")
+        elif f.get("item_id") and f["item_id"] not in {i["id"] for i in city.get("checklist", [])}:
+            err(path, f"{fid}: item_id {f['item_id']} not in {f['city']}.json")
+
+
+def check_packet(path: Path, p: dict, doc_types: set[str]) -> None:
     if "made up" not in p.get("about", "").lower():
         err(path, "packet 'about' must say the applicant is made up")
     for f in p.get("files", []):
         if not (path.parent / f["name"]).exists():
             err(path, f"listed file missing: {f['name']}")
+        if f.get("declared_type") not in doc_types | {"unknown"}:
+            err(path, f"{f['name']}: declared_type {f.get('declared_type')} is not a checklist doc_type")
     schema_check(path, {"files": p.get("files", [])}, "packet.schema.json")
 
 
 def main() -> int:
     cities = sorted((DATA / "cities").glob("*.json"))
+    by_slug: dict[str, dict] = {}
     for path in cities:
         if path.name.startswith("_"):
             continue
         c = load(path)
         if c is not None:
             check_city(path, c)
+            by_slug[path.stem] = c
+    if (flags := DATA / "law-flags.json").exists() and (doc := load(flags)) is not None:
+        check_flags(flags, doc, by_slug)
+    doc_types = {i["doc_type"] for c in by_slug.values() for i in c.get("checklist", [])}
     if (doc := load(DATA / "statutes.json")) is not None:
         check_statutes(DATA / "statutes.json", doc)
     for path in sorted((DATA / "types").glob("*.json")):
@@ -129,7 +151,7 @@ def main() -> int:
             check_type(path, t)
     manifest = DATA / "packet" / "manifest.json"
     if manifest.exists() and (p := load(manifest)) is not None:
-        check_packet(manifest, p)
+        check_packet(manifest, p, doc_types)
 
     real = [p for p in cities if not p.name.startswith("_")]
     verified = sum(1 for p in real if (load(p) or {}).get("verified"))

@@ -1,0 +1,41 @@
+{
+  "about": "Places where a city document disagrees with state law or with another source, beyond a renumbered section. Each flag quotes both sides with sources. Read 2026-11-07. confirmed stays false until a person on the team checks it. Never present a flag as legal advice: the app should say 'may be out of date, confirm with the city'.",
+  "flags": [
+    {
+      "id": "anaheim-jadu-old-citation",
+      "city": "anaheim",
+      "item_id": "jadu-owner-occupancy-covenant",
+      "kind": "old_statute_number",
+      "city_says": "authorized by the California Government Code Sections 65852.2 and 65852.22",
+      "current": "Renumbered by SB 477 (2024) to Government Code sections 66310-66342; see statutes.json",
+      "city_source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
+      "state_source": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
+      "confirmed": false
+    },
+    {
+      "id": "anaheim-jadu-owner-occupancy-scope",
+      "city": "anaheim",
+      "item_id": "jadu-owner-occupancy-covenant",
+      "kind": "possibly_stale_rule",
+      "city_says": "AMC Section 18.38.015.110 requires the recordation of an owner occupancy covenant for all JADUs ... Owner occupancy is required within one of the dwelling units on the property",
+      "current": "2025 change: if a JADU has shared sanitation facilities with the primary structure, owner-occupancy will be required; if it does not, owner occupancy will not be required (Gov. Code, § 66333, subd. (b))",
+      "city_source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
+      "state_source": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
+      "checked_date": "2026-11-07",
+      "confirmed": false
+    },
+    {
+      "id": "anaheim-adu-express-timing",
+      "city": "anaheim",
+      "item_id": null,
+      "kind": "sources_disagree",
+      "city_says": "Nov 2025 checklist: 'ADU Express Program which provides one day permitting and zero design costs'",
+      "current": "ADU Anaheim page: ADU Express 'allows qualified single-family properties to complete the ADU review process within 1-3 days'; the Pre-Approved Plan Catalogue page adds that eligibility screening 'can take a few weeks'",
+      "city_source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
+      "state_source": "https://www.anaheim.net/6349/ADU-Anaheim",
+      "checked_date": "2026-11-07",
+      "confirmed": false
+    }
+  ]
+}

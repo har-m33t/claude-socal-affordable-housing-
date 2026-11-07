@@ -12,7 +12,7 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj
 5 0 obj
-<< /Length 379 >>
+<< /Length 386 >>
 stream
 BT
 /F1 12 Tf
@@ -25,7 +25,7 @@ BT
 (APN: 000-000-00) Tj T*
 (Phone: 714-555-0142   Email: maria.ejemplo@example.com) Tj T*
 () Tj T*
-(Floor plan, detached ADU, 600 sf \(made-up dimensions\)) Tj T*
+(Made-up floor plan, detached ADU, Plan 002 style, 1 bed 1 bath) Tj T*
 ET
 endstream
 endobj
@@ -40,5 +40,5 @@ xref
 trailer
 << /Size 6 /Root 1 0 R >>
 startxref
-741
+748
 %%EOF

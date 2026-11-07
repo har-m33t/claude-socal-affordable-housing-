@@ -2,40 +2,54 @@
   "type": "adu",
   "name": "Accessory dwelling unit (ADU)",
   "verified": false,
-  "checked_date": null,
-  "about": "Project-type pack for ADUs. Entries come from the organizers' Lane 2 data list (checked by organizers 2026-11-06). Team 1 has not yet read the statute or the HCD ADU Handbook; verified stays false until a person does and fills checked_date.",
+  "checked_date": "2026-11-07",
+  "about": "Project-type pack for ADUs and JADUs. Every entry is quoted from the HCD ADU Handbook (March 2026), read 2026-11-07 from data/raw/hcd-adu-handbook-2026-03.pdf. Note: the organizers' data list put the 60-day deadline in Gov Code 66314; the Handbook cites 66317(a)(3) for it, so this pack follows the Handbook. verified stays false until a person on the team reviews this pack.",
   "handbook": {
-    "title": "HCD ADU Handbook (March 2026)",
+    "title": "HCD Accessory Dwelling Unit Handbook (March 2026)",
     "url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
     "translations_url": "https://www.hcd.ca.gov/building-standards/adu/handbook"
   },
   "statutes": [
     {
       "section": "66310-66342",
-      "title": "ADU law (formerly Gov Code 65852.2)",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
+      "title": "State ADU and JADU law (formerly 65852.2, 65852.22, 65852.23, 65852.26), Handbook p. 13",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
       "confirmed": false
     },
     {
-      "section": "66314",
-      "title": "ADU approvals: ministerial, 60 days",
-      "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=66314",
+      "section": "66314-66331",
+      "title": "ADU approval standards. Cited for pre-approved plan programs, which local agencies had to create by January 1, 2025: 'approve or deny applications pursuant to standards established in Government Code sections 66314-66331', Handbook p. 13",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
       "confirmed": false
     },
     {
-      "section": "66333",
-      "title": "JADU",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
+      "section": "66333-66339",
+      "title": "JADU law: 'JADUs must also comply with the provisions of JADU Law found in Government Code sections 66333-66339', Handbook p. 16",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=16",
+      "confirmed": false
+    },
+    {
+      "section": "66333(b)",
+      "title": "JADU owner occupancy: required only if the JADU shares sanitation facilities with the primary structure (2025 change), Handbook p. 14",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
       "confirmed": false
     }
   ],
   "clocks": [
     {
-      "id": "state-approval-deadline",
-      "description": "State deadline for the city to act on a complete ADU application",
+      "id": "approve-or-deny",
+      "description": "Permitting agency must approve or deny an application to create or serve an ADU or JADU within 60 days from when a completed application is received, if there is an existing single-family or multifamily dwelling on the lot",
       "days": 60,
-      "statute": "66314",
-      "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=66314",
+      "statute": "66317(a)(3)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11",
+      "confirmed": false
+    },
+    {
+      "id": "denial-comments",
+      "description": "On denial, the agency must return in writing a full set of comments listing defective or deficient items and how to remedy them, within 60 days from when a completed application is received",
+      "days": 60,
+      "statute": "66317(b)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11",
       "confirmed": false
     }
   ]

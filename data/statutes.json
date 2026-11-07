@@ -1,60 +1,60 @@
 {
-  "about": "Law Lens map from old ADU statute numbers to current ones. Every mapping comes from the organizers' Lane 2 data list (lanes/2-clear-it/data/DATA-SOURCES.md, checked by organizers 2026-11-06), which says it was confirmed on leginfo and in the HCD ADU Handbook (March 2026). Team 1 has NOT confirmed any entry yet: confirmed stays false and checked_date stays null until a person opens the source and checks it. Law Lens should show new_range as written; do not narrow a range to one section unless that entry is confirmed.",
+  "about": "Law Lens map from old ADU statute numbers to current ones. Every mapping is quoted from the HCD ADU Handbook (March 2026), read 2026-11-07 from data/raw/hcd-adu-handbook-2026-03.pdf; source_url points at the page. confirmed stays false until a person on the team checks the entry and says so. The Handbook maps the four old numbers to the whole range 66310-66342, not to single sections, so Law Lens must show the range.",
   "statutes": [
     {
       "old": "65852.2",
       "new_range": "66310-66342",
-      "title": "ADU law, renumbered by SB 477 (2024)",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
-      "checked_date": null,
+      "title": "ADU law. SB 477 (Ch. 7, Stats. 2024): 'updated from 65852.2, 65852.22, 65852.23, and 65852.26 to Government Code sections 66310-66342' (Handbook p. 13)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
       "confirmed": false
     },
     {
       "old": "65852.22",
-      "new_range": "66333",
-      "title": "JADU (junior accessory dwelling unit) rules",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
-      "checked_date": null,
+      "new_range": "66310-66342",
+      "title": "JADU law, same SB 477 renumbering (Handbook p. 13). JADU provisions now sit in 66333-66339 (Handbook p. 16)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
       "confirmed": false
     },
     {
       "old": "65852.23",
-      "new_range": "unknown",
-      "title": "Former ADU-related section; the organizers' list names it as an old number still in use but gives no new number",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
-      "checked_date": null,
+      "new_range": "66310-66342",
+      "title": "ADU/JADU law, same SB 477 renumbering (Handbook p. 13)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
       "confirmed": false
     },
     {
       "old": "65852.26",
-      "new_range": "unknown",
-      "title": "Former ADU-related section; the organizers' list names it as an old number still in use but gives no new number",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
-      "checked_date": null,
+      "new_range": "66310-66342",
+      "title": "ADU/JADU law, same SB 477 renumbering (Handbook p. 13)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
       "confirmed": false
     },
     {
       "old": "66324",
       "new_range": "66311.5",
-      "title": "2025 renumbering within ADU law (per HCD ADU Handbook, p. 13)",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
-      "checked_date": null,
+      "title": "2025 legislation: 'updated from 66324, 66327, and 66332 to sections 66311.5, 66313.5, and 66311.7, respectively' (Handbook p. 14)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
+      "checked_date": "2026-11-07",
       "confirmed": false
     },
     {
       "old": "66327",
       "new_range": "66313.5",
-      "title": "2025 renumbering within ADU law (per HCD ADU Handbook, p. 13)",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
-      "checked_date": null,
+      "title": "2025 legislation renumbering (Handbook p. 14)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
+      "checked_date": "2026-11-07",
       "confirmed": false
     },
     {
       "old": "66332",
       "new_range": "66311.7",
-      "title": "2025 renumbering within ADU law (per HCD ADU Handbook, p. 13)",
-      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
-      "checked_date": null,
+      "title": "2025 legislation renumbering (Handbook p. 14)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
+      "checked_date": "2026-11-07",
       "confirmed": false
     }
   ]

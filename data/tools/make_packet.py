@@ -8,9 +8,11 @@ it is real. Contact details use reserved test ranges: 555-01xx phone numbers,
 example.com email, and a placeholder APN and street that do not exist. Team 4's
 redaction tests use applicant.json as the list of values that must be caught.
 
-The site plan is left out on purpose, so the demo can show a missing item.
-The declared_type values are provisional until Anaheim's checklist is
-extracted; they will be aligned with the checklist's doc_type keys then.
+declared_type values match the doc_type keys in cities/anaheim.json. The
+applicant is adding a detached ADU (no JADU), so the three JADU items do not
+apply. Demo gaps, on purpose: the new address request is missing its site
+plan, and there is no meter spot report. The floor plan is not a Planning
+checklist item and is declared unknown for the agent to classify.
 """
 from __future__ import annotations
 
@@ -33,11 +35,14 @@ APPLICANT = {
 }
 
 DOCS = [
-    ("floor-plan.pdf", "floor_plan", "Floor plan, detached ADU, 600 sf (made-up dimensions)"),
-    ("elevations.pdf", "elevations", "Exterior elevations (made-up drawing set)"),
-    ("owner-affidavit.pdf", "owner_affidavit", "Owner affidavit, unsigned"),
-    ("utility-letter.pdf", "unknown", "Letter about utilities; type left for the agent to classify"),
+    ("sewer-capacity-email.pdf", "sewer_capacity_verification",
+     "Made-up email reply confirming sewer capacity for one detached ADU"),
+    ("new-address-request.pdf", "new_address_request",
+     "Made-up New Address Request Application. Site plan: NOT ATTACHED"),
+    ("floor-plan.pdf", "unknown",
+     "Made-up floor plan, detached ADU, Plan 002 style, 1 bed 1 bath"),
 ]
+STALE = ["elevations.pdf", "owner-affidavit.pdf", "utility-letter.pdf"]
 
 
 def pdf(lines: list[str]) -> bytes:
@@ -71,6 +76,8 @@ def pdf(lines: list[str]) -> bytes:
 
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
+    for name in STALE:
+        (OUT / name).unlink(missing_ok=True)
     a = APPLICANT
     header = [
         "MADE-UP TEST DOCUMENT - not a real applicant, address or parcel",
@@ -85,7 +92,8 @@ def main() -> int:
         (OUT / name).write_bytes(pdf(header + [title]))
     manifest = {
         "about": "MADE UP applicant packet for the Pointer demo. No real person or property. "
-                 "The site plan is intentionally missing.",
+                 "Detached ADU, no JADU. Intentionally missing: the site plan for the new "
+                 "address request, and the meter spot report.",
         "files": [{"name": n, "declared_type": t} for n, t, _ in DOCS],
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

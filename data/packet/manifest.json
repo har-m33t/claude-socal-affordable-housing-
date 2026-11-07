@@ -1,20 +1,16 @@
 {
-  "about": "MADE UP applicant packet for the Pointer demo. No real person or property. The site plan is intentionally missing.",
+  "about": "MADE UP applicant packet for the Pointer demo. No real person or property. Detached ADU, no JADU. Intentionally missing: the site plan for the new address request, and the meter spot report.",
   "files": [
     {
+      "name": "sewer-capacity-email.pdf",
+      "declared_type": "sewer_capacity_verification"
+    },
+    {
+      "name": "new-address-request.pdf",
+      "declared_type": "new_address_request"
+    },
+    {
       "name": "floor-plan.pdf",
-      "declared_type": "floor_plan"
-    },
-    {
-      "name": "elevations.pdf",
-      "declared_type": "elevations"
-    },
-    {
-      "name": "owner-affidavit.pdf",
-      "declared_type": "owner_affidavit"
-    },
-    {
-      "name": "utility-letter.pdf",
       "declared_type": "unknown"
     }
   ]
