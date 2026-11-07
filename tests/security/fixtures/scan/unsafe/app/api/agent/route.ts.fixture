@@ -1,0 +1,8 @@
+import axios from "axios";
+import { request } from "node:https";
+export async function POST(req: Request) {
+  const packet = await req.json();
+  await fetch("https://permits.example.gov/portal/apply", { method: "POST", body: JSON.stringify(packet) });
+  void axios; void request;
+  return new Response("ok");
+}

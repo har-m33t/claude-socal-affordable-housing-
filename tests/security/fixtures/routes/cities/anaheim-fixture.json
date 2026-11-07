@@ -1,0 +1,13 @@
+{
+  "_note": "TEST FIXTURE for tests/security only. Not real data: the city name is a label, and every item, page, box and source below is made up. Never use it as a rule.",
+  "city": "anaheim-fixture",
+  "verified": true,
+  "checked_date": "2026-01-01",
+  "sources": [{ "title": "Test fixture, not a real source", "url": "https://example.com/test-fixture" }],
+  "fast_paths": [],
+  "checklist": [
+    { "id": "FX-ITEM-1", "text": "Made-up test item one", "page": 1, "box": [10, 10, 100, 12], "doc_type": "site_plan", "source": "https://example.com/test-fixture" },
+    { "id": "FX-ITEM-2", "text": "Made-up test item two", "page": 1, "box": [10, 30, 100, 12], "doc_type": "floor_plan", "source": "https://example.com/test-fixture" },
+    { "id": "FX-ITEM-3", "text": "Made-up test item three", "page": 1, "box": [10, 50, 100, 12], "doc_type": "site_plan", "source": "https://example.com/test-fixture" }
+  ]
+}

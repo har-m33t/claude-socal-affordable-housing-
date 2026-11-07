@@ -1,0 +1,5 @@
+export function report(data: string) {
+  navigator.sendBeacon("/collect", data);
+  const socket = new WebSocket("wss://example.com/live");
+  socket.send(data);
+}

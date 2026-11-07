@@ -1,0 +1,11 @@
+// The agent never calls fetch( itself and never builds a mailto: link; only the
+// Anthropic SDK makes requests. Do not import nodemailer here.
+/* No submit or send endpoint exists: see tests/security/no-send.test.ts. */
+import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
+const note = "Pointer drafts messages; it does not send them. See https://example.com/docs";
+export async function POST(req: Request) {
+  const body = z.object({ city: z.string() }).parse(await req.json());
+  void new Anthropic();
+  return new Response(`data: ${JSON.stringify({ note, city: body.city })}\n\n`, { headers: { "content-type": "text/event-stream" } });
+}

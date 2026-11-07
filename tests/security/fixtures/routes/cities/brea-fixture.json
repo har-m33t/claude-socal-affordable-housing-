@@ -1,0 +1,9 @@
+{
+  "_note": "TEST FIXTURE for tests/security only. Not real data: an unverified stub with nothing in it.",
+  "city": "brea-fixture",
+  "verified": false,
+  "checked_date": null,
+  "sources": [],
+  "fast_paths": [],
+  "checklist": []
+}

@@ -1,0 +1,5 @@
+"use client";
+export async function runAgent(city: string) {
+  const res = await fetch("/api/agent", { method: "POST", body: JSON.stringify({ city }) });
+  return res.body;
+}
