@@ -27,13 +27,27 @@ import {
 import { createRecorder } from "../../lib/agent/recorder";
 import { DEFAULT_REPLAY_PATH, loadReplay } from "../../lib/agent/replay";
 
-const statutes: StatuteEntry[] = statutesJson;
+// Interpreted, not cast: the real file ships the {about, statutes:[...]}
+// wrapper, and a cast would hand every test the wrapper object instead.
+const statutes: StatuteEntry[] = loadStatuteTable(statutesJson);
 
-const foundConfirmed = statutes.find((entry) => entry.confirmed === true);
-const foundUnconfirmed = statutes.find((entry) => entry.confirmed === false);
-if (!foundConfirmed || !foundUnconfirmed) {
-  throw new Error("data/statutes.json must hold one confirmed and one unconfirmed entry for these tests");
+const foundConfirmed = statutes[0];
+const secondRow = statutes[1] ?? statutes[0];
+if (foundConfirmed === undefined || secondRow === undefined) {
+  throw new Error("data/statutes.json must hold at least one entry for these tests");
 }
+/**
+ * Team 1's shipped table is ALL confirmed, which is the right state for real
+ * data: a human read every row. So the unconfirmed case is made here by taking
+ * a real row and flipping the flag, rather than demanding the shipped file
+ * carry an unread one. It keeps the row's real old section number, which the
+ * prose and Unicode tests below need, and REPLACES that row instead of being
+ * appended, so the table never holds two entries under one id.
+ */
+const foundUnconfirmed: StatuteEntry = { ...secondRow, confirmed: false };
+const statutesWithUnconfirmed: StatuteEntry[] = statutes.map((e) =>
+  e === secondRow ? foundUnconfirmed : e,
+);
 /**
  * The single key an entry answers to. resolveStatuteId is strict on purpose:
  * an entry that declares an `id` no longer resolves by its `old` number, so a
@@ -374,14 +388,21 @@ describe("loadStatuteTable", () => {
   });
 
   it("accepts an object wrapping the array under `statutes`", () => {
-    // The shape Team 1's file uses: provenance notes beside the array.
-    const wrapped = { about: "synthetic wrapper built for this test", statutes: statutesJson };
+    // The shape Team 1's file uses: provenance notes beside the array. Wrap the
+    // ARRAY - statutesJson is already a wrapper, so passing it here would nest
+    // one wrapper inside another and is correctly rejected.
+    const wrapped = { about: "synthetic wrapper built for this test", statutes };
     expect(loadStatuteTable(wrapped)).toEqual(loadStatuteTable(statutesJson));
   });
 
   it("keeps unconfirmed entries so the resolver can tell them from unknown ids", () => {
-    const table = loadStatuteTable(statutesJson);
+    // Team 1's shipped table is all-confirmed, so this uses the locally flipped
+    // table: the point is that the loader PRESERVES the flag rather than
+    // filtering unconfirmed rows out, which is what lets resolveStatuteId say
+    // "unconfirmed" instead of "unknown".
+    const table = loadStatuteTable({ statutes: statutesWithUnconfirmed });
     expect(table.some((entry) => entry.confirmed === false)).toBe(true);
+    expect(table).toHaveLength(statutesWithUnconfirmed.length);
   });
 
   it("leaves out an entry missing a field the renderer needs", () => {
@@ -430,7 +451,7 @@ describe("resolveStatuteId", () => {
   });
 
   it("rejects an unconfirmed entry and names the id", () => {
-    const result = resolveStatuteId(keyOf(unconfirmedEntry), statutes);
+    const result = resolveStatuteId(keyOf(unconfirmedEntry), statutesWithUnconfirmed);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toContain(keyOf(unconfirmedEntry));

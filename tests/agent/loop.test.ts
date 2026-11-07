@@ -20,6 +20,7 @@ import {
 } from "../../lib/agent/config";
 import type { AgentRunDeps, AnthropicClientLike, ToolsLike, VerifierLike } from "../../lib/agent/loop";
 import { loadStatutesFromDisk, runAgent } from "../../lib/agent/loop";
+import { loadStatuteTable } from "../../lib/agent/verifier";
 import { buildSystemBlocks, buildUserContent, UNTRUSTED_OPEN } from "../../lib/agent/prompt";
 import { clientKey, createRateLimiter, resetRateLimiter } from "../../lib/agent/ratelimit";
 // `trustProxyHeaders` is read through config so the env flag is the only switch.
@@ -45,7 +46,9 @@ const VERIFIED_CITY = readJson<CityConfig>("fixtures", "mock-city.json");
 const UNVERIFIED_CITY = readJson<CityConfig>("fixtures", "mock-city-unverified.json");
 const VERIFIED_PACK = readJson<ProjectTypePack>("data", "types", "adu.json");
 const UNVERIFIED_PACK = readJson<ProjectTypePack>("data", "types", "sb9.json");
-const STATUTES = readJson<StatuteEntry[]>("data", "statutes.json");
+// Interpreted with the real loader, not cast: Team 1's file uses the
+// {about, statutes:[...]} wrapper and a cast silently yields the wrapper.
+const STATUTES = loadStatuteTable(readJson<unknown>("data", "statutes.json"));
 
 /** A table row to build hostile and benign cases from. */
 const STATUTE_ROW: StatuteEntry = {
@@ -284,7 +287,7 @@ describe("the verified gate", () => {
     expect(frames.find((f) => f.type === "error")).toMatchObject({ code: "not_verified" });
   });
 
-  it("refuses the real data/cities/anaheim.json, which ships verified:false", async () => {
+  it("lets the real data/cities/anaheim.json through, now that Team 1 verified it", async () => {
     const createClient = vi.fn();
     const frames = await collect(
       runAgent(request({ city: "Anaheim", projectType: "adu" }), {
@@ -294,9 +297,12 @@ describe("the verified gate", () => {
         createClient: createClient as unknown as AgentRunDeps["createClient"],
       }),
     );
-    expect(createClient).not.toHaveBeenCalled();
-    expect(frames.find((f) => f.type === "error")).toMatchObject({ code: "not_verified" });
-    expect(events(frames)).toHaveLength(0);
+    // Team 1 flipped anaheim.json to verified:true on 2026-11-07 after reading
+    // the November 2025 PDF, so the gate must now let it PAST, not refuse it.
+    expect(createClient).toHaveBeenCalled();
+    expect(
+      frames.filter((f) => f.type === "error" && f.code === "not_verified"),
+    ).toHaveLength(0);
   });
 
   it("reports a city that does not exist instead of inventing one", async () => {
@@ -1704,8 +1710,10 @@ describe("the statute table", () => {
     });
     const table = await loadStatutesFromDisk(APP_ROOT, loadStatuteTable);
     expect(loadStatuteTable).toHaveBeenCalledTimes(1);
-    // data/statutes.json is a bare array today; the loader still decides.
-    expect(Array.isArray(seen[0])).toBe(true);
+    // Team 1's file ships the {about, statutes:[...]} wrapper, so what reaches
+    // the loader is an object, not an array - and the loader still decides.
+    expect(Array.isArray(seen[0])).toBe(false);
+    expect(seen[0]).toHaveProperty("statutes");
     expect(table).toEqual([STATUTE_ROW]);
   });
 

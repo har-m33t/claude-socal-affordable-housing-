@@ -41,7 +41,8 @@ async function runUnverified(target: RouteTarget) {
     target,
     {
       city: target.unverifiedCity,
-      type: target.projectType,
+      projectType: target.projectType,
+      question: "What is still missing from my packet?",
       documents: [{ name: "site-plan.pdf", declared_type: "site_plan", text: "Made-up site plan text for a test." }],
     },
     { kind: "fake", fake },

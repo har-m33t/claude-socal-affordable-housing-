@@ -43,10 +43,17 @@ export interface AgentDocument {
   text: string;
 }
 
+/**
+ * The real route's body, as confirmed by the Team 3 lead on issue #3:
+ * `projectType`, not `type` (which collides with the SSE frame
+ * discriminator), and `question` is required - it is the homeowner's actual
+ * request. The route uses z.strictObject, so an unknown key is a 400.
+ */
 export interface AgentRequestBody {
   city: string;
-  type: string;
-  documents: AgentDocument[];
+  projectType: string;
+  question: string;
+  documents?: AgentDocument[];
 }
 
 export interface RouteModule {
@@ -102,7 +109,15 @@ export async function parseAgentResponse(res: Response): Promise<ParsedStream> {
       if (typeof value !== "object" || value === null || Array.isArray(value)) {
         parsed.parseErrors.push(`data frame is not a JSON object: ${data.slice(0, 120)}`);
       } else {
-        parsed.events.push(value as AgentEvent);
+        // The route streams a StreamFrame per `data:` line, not a bare event:
+        // an action is {type:"event", event:{...}}. Unwrap it. Non-action
+        // frames carry an SSE `event:` name and are already split off above.
+        const frame = value as { type?: unknown; event?: unknown };
+        if (frame.type === "event" && typeof frame.event === "object" && frame.event !== null) {
+          parsed.events.push(frame.event as AgentEvent);
+        } else {
+          parsed.events.push(value as AgentEvent);
+        }
       }
     } catch {
       parsed.parseErrors.push(`data frame is not JSON: ${data.slice(0, 120)}`);

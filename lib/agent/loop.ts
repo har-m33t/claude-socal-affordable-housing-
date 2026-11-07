@@ -214,7 +214,13 @@ export async function loadStatutesFromDisk(
     await readFile(nodePath.join(appRoot, "data", "statutes.json"), "utf8"),
   );
   if (typeof loadStatuteTable === "function") return loadStatuteTable(raw);
-  return Array.isArray(raw) ? (raw as StatuteEntry[]) : [];
+  // Fallback understands both shapes itself. Returning [] for the wrapper would
+  // silently disable every statute_id rather than fail loudly.
+  if (Array.isArray(raw)) return raw as StatuteEntry[];
+  if (raw !== null && typeof raw === "object" && Array.isArray((raw as { statutes?: unknown }).statutes)) {
+    return (raw as { statutes: StatuteEntry[] }).statutes;
+  }
+  return [];
 }
 
 /** The handbook is optional. Absent is a status frame, never a fabrication. */

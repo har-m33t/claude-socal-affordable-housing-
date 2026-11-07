@@ -64,7 +64,8 @@ beforeAll(async () => {
 function injectionBody(target: RouteTarget): AgentRequestBody {
   return {
     city: target.verifiedCity,
-    type: target.projectType,
+    projectType: target.projectType,
+    question: "What is still missing from my packet?",
     documents: [{ name: "site-plan-notes.pdf", declared_type: "site_plan", text: documentText }],
   };
 }

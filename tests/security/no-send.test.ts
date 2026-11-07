@@ -14,7 +14,15 @@ import { describe, expect, it } from "vitest";
 import { REPO_ROOT } from "./helpers/route-harness";
 import { DEFAULT_ROUTE_ALLOWLIST, scanTree, stripComments } from "./helpers/scan";
 
-const ROUTE_ALLOWLIST = DEFAULT_ROUTE_ALLOWLIST; // ["app/api/agent/route.ts"]
+/**
+ * app/api/agent/route.ts, plus Team 2's fixtures route, reviewed by the
+ * integrating lead on 2026-11-07: it serves ONE hard-coded filename from a
+ * `Record` allowlist, 404s anything else, is GET-only and read-only, and the
+ * request name is used only as a lookup key, so no traversal is reachable.
+ * It is temporary - delete it once the viewer reads Team 1's real
+ * data/docs/anaheim-adu-checklist.pdf, and drop this entry with it.
+ */
+const ROUTE_ALLOWLIST = [...DEFAULT_ROUTE_ALLOWLIST, "app/fixtures/[name]/route.ts"];
 const NAME_ALLOWLIST: string[] = [];
 const FIXTURES = join(REPO_ROOT, "tests/security/fixtures/scan");
 const scanFixture = (tree: "safe" | "unsafe") =>

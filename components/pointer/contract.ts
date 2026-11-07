@@ -118,15 +118,35 @@ export function isSafeUrl(url: string): boolean {
 /** Runtime guard: events come from a network stream later, so never trust their shape. */
 export function parseEvent(raw: unknown): AgentEvent | null {
   if (!raw || typeof raw !== "object") return null;
-  const e = raw as Record<string, unknown>;
+  // The route streams a StreamFrame per `data:` line. An action frame is
+  // {type:"event", event:{...}}; unwrap it. A bare event is still accepted so
+  // fixtures/mock-events.json keeps working.
+  const frame = raw as { type?: unknown; event?: unknown };
+  const source =
+    frame.type === "event" && frame.event && typeof frame.event === "object"
+      ? frame.event
+      : raw;
+  const e = source as Record<string, unknown>;
   if (!TOOLS.includes(e.tool as Tool)) return null;
-  if (typeof e.item_id !== "string" || typeof e.ts !== "string") return null;
+  if (typeof e.ts !== "string") return null;
+  // item_id is required on four tools and optional on add_note alone, which may
+  // be a general note with no checklist item (confirmed by the lead on #3).
+  if (e.tool === "add_note") {
+    if (e.item_id !== undefined && e.item_id !== null && typeof e.item_id !== "string") return null;
+  } else if (typeof e.item_id !== "string") {
+    return null;
+  }
   if (e.status !== undefined && !STATUSES.includes(e.status as ItemStatus)) return null;
   if (e.text !== undefined && typeof e.text !== "string") return null;
-  if (e.citation !== undefined) {
-    const c = e.citation as RawCitation;
-    const ok = typeof c === "string" || (typeof c === "object" && c !== null && typeof (c as { url?: unknown }).url === "string");
-    if (!ok) return null;
+  // Law arrives ONLY as a server-rendered statute_ref. The model cannot supply
+  // a citation, so a `citation` key here means something upstream is wrong.
+  if (e.citation !== undefined) return null;
+  if (e.statute_ref !== undefined) {
+    const r = e.statute_ref as Record<string, unknown> | null;
+    if (!r || typeof r !== "object") return null;
+    for (const k of ["id", "old", "new_range", "title", "source_url", "checked_date"]) {
+      if (typeof r[k] !== "string") return null;
+    }
   }
-  return e as unknown as AgentEvent;
+  return source as unknown as AgentEvent;
 }

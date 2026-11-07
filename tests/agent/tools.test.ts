@@ -266,10 +266,12 @@ describe("validateToolInput - happy path", () => {
     ]);
   });
 
-  it("accepts a real city config whose box and page are null", () => {
+  it("accepts the real city config, whose items now carry a page and a box", () => {
     const firstItem = anaheim.checklist[0]!;
-    expect(firstItem.box).toBeNull();
-    expect(firstItem.page).toBeNull();
+    // Team 1 extracted these from the November 2025 PDF text layer, so the
+    // pointer hand finally has somewhere to point.
+    expect(firstItem.page).toEqual(expect.any(Number));
+    expect(firstItem.box).toHaveLength(4);
     const { event } = ok(
       validateToolInput("add_note", { item_id: firstItem.id, text: "note" }, anaheim),
     );

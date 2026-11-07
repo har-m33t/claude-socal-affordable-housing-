@@ -31,7 +31,9 @@ const SYSTEM = [
 
 const Body = z.object({
   city: z.string().regex(/^[a-z0-9-]+$/),
-  type: z.string().regex(/^[a-z0-9-]+$/),
+  // `projectType`, not `type`, per the body shape confirmed on issue #3.
+  projectType: z.string().regex(/^[a-z0-9-]+$/),
+  question: z.string().min(1).max(4000),
   documents: z
     .array(z.object({ name: z.string().max(200), declared_type: z.string().max(100), text: z.string().max(200_000) }))
     .max(20),
