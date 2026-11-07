@@ -140,9 +140,11 @@ Parallel lanes must not share a checkout: two agents editing one working tree
 will clobber each other and corrupt the index.
 
 ```bash
-# from the repo root, for each lane
-BASE=$(git rev-parse --abbrev-ref HEAD)          # default branch: claude/happy-mendel-l23ta1
-git worktree add ../socal-housing-<lane> -b agent/<role>/<lane> "$BASE"
+# from the repo root, once
+git fetch origin
+
+# then for each lane — branch from the trunk, not from whatever you have checked out
+git worktree add ../socal-housing-<lane> -b agent/<role>/<lane> origin/main
 ```
 
 Conventions:
@@ -151,6 +153,8 @@ Conventions:
   inside it (a nested worktree ends up in `git status` and in commits).
 - Branch: `agent/<role>/<lane>`, lowercase and hyphenated, matching
   `CONTRIBUTING.md` naming.
+- Base every lane on `origin/main`, the default branch. Branching from a local
+  HEAD means lanes start from whatever the lead happened to have checked out.
 - One lane, one worktree, one branch, one subagent.
 - A solo lane needs no worktree. Work in place on the current branch.
 - Each subagent gets its worktree's **absolute path** in its prompt and treats
