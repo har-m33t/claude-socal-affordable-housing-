@@ -1,0 +1,19 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Large or raw data (keep folder structure)
+data/raw/*
+!data/raw/.gitkeep
+*.zip
+*.gz
+
+# Office temp files
+~$*
+
+# Env / secrets
+.env
+.env.*
