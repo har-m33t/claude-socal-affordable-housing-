@@ -1,41 +1,37 @@
 /**
- * Lane 3: the law-claim verifier. The last gate before a law claim reaches a
- * homeowner's screen.
+ * Lane 3: the prose law-claim backstop, and the statute resolver.
  *
- * It FAILS CLOSED. California renumbered ADU law in 2024 and city handouts
- * still cite the dead numbers, so a confident wrong answer here is the worst
- * possible outcome. A dropped sentence costs the demo a sentence; an unbacked
- * statement of law costs the user real money.
+ * THE DESIGN. The model is not trusted to write law at all. Law reaches the UI
+ * through exactly one channel: the model NAMES an entry in the statute table
+ * by id, and the server resolves that id and renders the authoritative text
+ * from verified data. The model never types a section number, a range, a
+ * title or a URL, so there is nothing for it to get wrong and nothing for an
+ * injected instruction to forge.
  *
- * Backing means one of exactly two things:
- *   (a) a well-formed `citation` (an absolute http(s) `source_url` plus an ISO
- *       `checked_date`), or
- *   (b) EVERY law-like reference in the prose resolves to a
- *       `data/statutes.json` entry whose `confirmed` is literally `true`.
+ * That leaves this module two jobs:
  *
- * `confirmed: false` is a lead, not a fact: a human has not opened the source.
- * A claim resting on one is dropped.
+ *   1. `verifyEvent` / `looksLikeLawClaim` - the BACKSTOP. Prose (`text` on
+ *      draft_field and add_note) is plain-language explanation only and may
+ *      not assert law. If it does, the event is dropped, full stop. There is
+ *      no longer a "but it carried a citation" escape, because law does not
+ *      belong in prose any more. That makes the gate strictly simpler and
+ *      strictly safer than the citation-and-statute-map version it replaces.
  *
- * Both halves are hostile-input aware. City PDFs and uploaded packets are
- * untrusted and prompt injection through them is in this product's threat
- * model, so a planted instruction can induce any output shape it likes. Two
- * consequences shape the code below:
+ *   2. `loadStatuteTable` / `resolveStatuteId` - the LAW CHANNEL. An id either
+ *      is in the table and confirmed, or the claim is refused. Every field
+ *      handed back is copied out of the table entry, never out of the caller's
+ *      input.
  *
- *   1. Detection runs on a normalized copy of the text, never on the raw
- *      bytes. Fullwidth digits, zero-width splits inside a number and
- *      combining marks are all folded away first, so none of them can hide a
- *      citation from the detector.
- *   2. A reference that cannot be resolved against the statute map by
- *      construction - a bill number, or digits that are not ASCII after
- *      normalization - does not get silently skipped. It forces the citation
- *      requirement, because an unresolvable reference is an unbacked one.
+ * Everything here fails closed. California renumbered ADU law in 2024 and city
+ * handouts still cite the dead numbers, so a confident wrong answer is the
+ * worst possible outcome: a dropped sentence costs the demo a sentence, while
+ * an unbacked statement of law costs the user real money.
  *
  * The event handed back on success is the original, untouched. Normalization
  * exists only to decide.
  */
 import type {
   AgentEvent,
-  Citation,
   StatuteEntry,
   VerifierModule,
   VerifyResult,
@@ -59,21 +55,35 @@ const BLANK_RENDERING =
   /[\p{Cf}\p{Mn}\p{Me}\p{Default_Ignorable_Code_Point}\u2800\u115F\u1160\u3164\uFFA0]/gu;
 
 /**
- * Invisible or hair-thin characters sitting between two digits, which is the
- * shape of an attempt to break up a section number: "66<U+2009>333".
+ * A blank-rendering run sitting between two digits.
  *
- * Deliberately NOT ordinary spaces, tabs or newlines. Joining across those
- * welds a section number to whatever number follows it - "Section 66333 2024"
- * becomes the 9-digit run "663332024", which no section pattern matches, and
- * the reference disappears. A vanished reference is far worse than a false
- * positive: it is a miss, and the claim then sails through.
+ * `fold` must not DELETE these, only because deletion welds: "1234<U+2800>5678"
+ * would become the 8-digit run "12345678", which no section pattern matches,
+ * and both numbers would vanish at once. Between two digits the run collapses
+ * to a single plain space instead, which keeps the two numbers separate and
+ * separately visible. Everywhere else deletion is right, and is what closes up
+ * "ministeri<U+200B>al".
+ */
+const BLANK_RENDERING_BETWEEN_DIGITS =
+  /(?<=\p{Nd})[\p{Cf}\p{Mn}\p{Me}\p{Default_Ignorable_Code_Point}\u2800\u115F\u1160\u3164\uFFA0]+(?=\p{Nd})/gu;
+
+/**
+ * Anything between two digits that could be hiding a break in a number:
+ * blank-rendering runs and ordinary whitespace alike.
  *
- * This runs on the RAW text, before normalization. NFKD folds U+2009, U+200A
- * and U+202F into ordinary spaces, so after normalization they are no longer
- * distinguishable from a space that was always a space.
+ * This is deliberately aggressive, and it is safe to be aggressive ONLY
+ * because it feeds the `joined` form alone. Welding is the hazard here -
+ * "Section 66333 2024" joins into the 9-digit run "663332024", which no
+ * section pattern matches - but the `unjoined` form is scanned too and still
+ * sees "66333" on its own, and callers union the two. Over-detecting a
+ * ZIP-shaped number is the cheap error; losing a real statute is not.
+ *
+ * It runs on the RAW text, before normalization: NFKD folds U+2009, U+200A and
+ * U+202F into ordinary spaces, so after normalization a hair-thin space can no
+ * longer be told apart from a space that was always a space.
  */
 const BLANK_INSIDE_NUMBER =
-  /(?<=\p{Nd})[\p{Cf}\p{Default_Ignorable_Code_Point}\u2800\u115F\u1160\u3164\uFFA0\u2009\u200A\u202F]+(?=\p{Nd})/gu;
+  /(?<=\p{Nd})[\p{Cf}\p{Default_Ignorable_Code_Point}\p{Zs}\s\u2800\u115F\u1160\u3164\uFFA0]+(?=\p{Nd})/gu;
 
 /** The two forms the detectors run against. */
 interface NormalizedText {
@@ -89,14 +99,19 @@ interface NormalizedText {
  * marks), strip what renders blank, then NFKC to put the rest back together.
  */
 function fold(text: string): string {
-  return text.normalize("NFKD").replace(BLANK_RENDERING, "").normalize("NFKC");
+  return text
+    .normalize("NFKD")
+    .replace(BLANK_RENDERING_BETWEEN_DIGITS, " ")
+    .replace(BLANK_RENDERING, "")
+    .normalize("NFKC");
 }
 
 /**
- * Both forms are kept and both are searched, belt and braces. The joined form
- * catches a number broken up on purpose; the unjoined form guarantees that no
- * future change to the joining rule can silently hide a reference that plain
- * text would have shown. Callers union the results.
+ * Both forms are kept and CALLERS MUST UNION THEM - that is what licenses the
+ * joined form to be as aggressive as it is. The joined form catches a number
+ * broken up on purpose; the unjoined form guarantees that no amount of joining
+ * can hide something plain text would have shown. Scanning only one of them
+ * reintroduces either the evasion or the welding bug, depending which.
  *
  * Only the decision uses this. The event keeps its original text.
  */
@@ -107,16 +122,16 @@ function normalizeForDetection(text: string): NormalizedText {
 // --------------------------------------------------------------- detection
 
 /*
- * WHAT THIS IS AND IS NOT. Everything below is a regex detector run over model
- * output after the fact. That makes it a mitigation, not a guarantee, and it
- * should not be read as a hard gate. Known-open evasions: Unicode confusables
- * (UTS #39 skeletons - NFKC does not fold Cyrillic "c" onto Latin "c", so a
- * homoglyph in a law-asserting phrase still passes), letter-spaced phrases
- * ("m i n i s t e r i a l"), and the fact that a citation is checked for form
- * and not for truth, so a well-formed but fabricated source_url backs any
- * claim. The robust alternative is not a better regex: law-bearing prose
- * should be constructed from verified data rather than scanned after it has
- * been written.
+ * WHAT THIS IS AND IS NOT. Law reaches the UI only through server-resolved
+ * statute ids: `resolveStatuteId` reads the section, range, title, URL and
+ * check date out of the verified table, so nothing the model types is ever
+ * read as law. The detector below is a BACKSTOP against the model asserting
+ * law in prose, where it does not belong - not the thing that makes the law
+ * correct. It is a regex over model output, so it mitigates rather than
+ * guarantees: Unicode confusables (UTS #39 skeletons - NFKC does not fold
+ * Cyrillic "c" onto Latin "c") and letter-spaced phrases ("m i n i s t e r i a
+ * l") remain open against it. Those evasions no longer gate correctness,
+ * because the legitimate law channel does not pass through here at all.
  *
  * Every pattern below carries the `u` flag and spells a digit `\p{Nd}`, not
  * `\d`. `\d` is ASCII-only, so an Arabic-Indic or other non-ASCII numeral
@@ -221,234 +236,178 @@ function matchesAnyPattern(candidate: string): boolean {
   return false;
 }
 
-// -------------------------------------------------------------- references
+
+// ------------------------------------------------------------ law channel
 
 /**
- * One thing in the prose that points at law and therefore has to be backed.
- *
- *   `section` - a code section this module can look up in the statute map.
- *   `bill`    - a bill number. The statute map is keyed by code sections, so a
- *               bill can never resolve there; it can only be backed by a
- *               citation.
- *   `opaque`  - a section-shaped run of digits that is still not ASCII after
- *               normalization, so there is no number to look up. Treated as
- *               unresolvable rather than ignored.
+ * A statute as the SERVER renders it. Every field is copied out of the table
+ * entry. None of it comes from the model, which is the entire point: the model
+ * contributes an id and nothing else.
  */
-interface LawReference {
-  kind: "section" | "bill" | "opaque";
-  token: string;
-  index: number;
+export interface ResolvedStatute {
+  id: string;
+  old: string;
+  new_range: string;
+  title: string;
+  source_url: string;
+  checked_date: string;
 }
 
-/** Section-shaped digit runs, with or without a marker word in front. */
-const STATUTE_TOKEN_SCAN = /(?<![\p{Nd}.,])\p{Nd}{4,6}(?:\.\p{Nd}{1,3})?(?!\p{Nd})/gu;
+export type StatuteResolution =
+  | { ok: true; statute: ResolvedStatute }
+  | { ok: false; reason: string };
 
-const BILL_REFERENCE_SCAN = new RegExp(BILL_REFERENCE.source, "giu");
+/** An entry may carry an explicit `id`. The frozen StatuteEntry does not declare one. */
+type StatuteEntryWithId = StatuteEntry & { id?: unknown };
 
-const ASCII_SECTION = /^[0-9]+(?:\.[0-9]+)?$/;
-
-function digitCount(token: string): number {
-  return Array.from(token).filter((char) => /\p{Nd}/u.test(char)).length;
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "";
 }
 
-/**
- * Every law-like reference in the normalized text, in the order it appears,
- * duplicates removed.
- *
- * This is the fix for partial backing: the old code collected only the tokens
- * it could look up, so a sentence pairing a confirmed section with an unbacked
- * bill passed on the strength of the section alone. Everything that points at
- * law is enumerated here, and verifyEvent requires all of it to resolve.
- */
-function collectReferences(normalized: NormalizedText): LawReference[] {
-  const found: LawReference[] = [];
-
-  // Both forms are scanned and the results unioned, so a reference only has to
-  // be visible in ONE of them to be required to resolve.
-  scanForReferences(normalized.unjoined, found);
-  if (normalized.joined !== normalized.unjoined) {
-    scanForReferences(normalized.joined, found);
-  }
-
-  const seen = new Set<string>();
-  return found
-    .filter((reference) => {
-      const key = `${reference.kind}:${reference.token}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .sort((a, b) => a.index - b.index);
-}
-
-function scanForReferences(normalized: string, found: LawReference[]): void {
-  for (const match of normalized.matchAll(STATUTE_TOKEN_SCAN)) {
-    const token = match[0];
-    const index = match.index ?? 0;
-    if (ASCII_SECTION.test(token)) {
-      // A four-digit run is only a section when a marker word precedes it;
-      // otherwise it is a year, a lot size or a street number.
-      if (digitCount(token) >= 5 || hasSectionMarker(token, normalized)) {
-        found.push({ kind: "section", token, index });
-      }
-      continue;
-    }
-    // Section-shaped but not ASCII after normalization: nothing to look up.
-    if (digitCount(token) >= 5 || hasSectionMarker(token, normalized)) {
-      found.push({ kind: "opaque", token, index });
-    }
-  }
-
-  for (const match of normalized.matchAll(BILL_REFERENCE_SCAN)) {
-    found.push({ kind: "bill", token: match[0], index: match.index ?? 0 });
-  }
-}
-
-/** True when a Government Code or section marker sits immediately before `token`. */
-function hasSectionMarker(token: string, text: string): boolean {
-  const literal = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const marked = new RegExp(
-    `(?:§{1,2}|\\bsec(?:tion)?s?\\.?|\\bgov(?:t|ernment)?\\b\\.?\\s*(?:code)?)\\s*${literal}(?!\\p{Nd})`,
-    "iu",
+/** Every field the renderer needs, present and of the right type. */
+function isStatuteEntry(value: unknown): value is StatuteEntry {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    isNonEmptyString(candidate.old) &&
+    isNonEmptyString(candidate.new_range) &&
+    isNonEmptyString(candidate.title) &&
+    isNonEmptyString(candidate.source_url) &&
+    isNonEmptyString(candidate.checked_date) &&
+    typeof candidate.confirmed === "boolean"
   );
-  return marked.test(text);
 }
 
-// ------------------------------------------------------------- statute map
-
-/** Numeric value of a section token, or null when it is not numeric. */
-function sectionValue(raw: string): number | null {
-  const value = Number.parseFloat(raw.trim());
-  return Number.isFinite(value) ? value : null;
+function unwrapRows(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "object" && raw !== null) {
+    const wrapped = (raw as { statutes?: unknown }).statutes;
+    if (Array.isArray(wrapped)) return wrapped;
+  }
+  throw new Error(
+    "statute table must be an array of entries or an object carrying a `statutes` array",
+  );
 }
 
 /**
- * True when `token` falls inside an entry's `new_range`. `new_range` is either
- * a single section or a hyphenated range, exactly as `data/statutes.json`
- * writes it; nothing is assumed about which numbers those are.
+ * Read a statute table out of parsed JSON.
+ *
+ * Two shapes are accepted, because two of them exist: a bare array, and an
+ * object wrapping the array under `statutes` alongside its own provenance
+ * notes. Anything else throws, because a table nobody can read is a boot-time
+ * problem and should say so.
+ *
+ * An individual entry missing a field the renderer needs is left out rather
+ * than throwing. That degrades closed: the id simply will not resolve, and
+ * `resolveStatuteId` says so, which beats refusing to start over one typo.
+ * Entries with `confirmed: false` are KEPT, so the resolver can tell "not
+ * confirmed yet" apart from "not in the table".
  */
-function matchesNewRange(token: string, newRange: string): boolean {
-  const value = sectionValue(token);
-  if (value === null) return false;
-  const parts = String(newRange ?? "")
-    .split(/[-‐-―]/)
-    .map((part) => part.trim())
-    .filter((part) => part !== "");
-  if (parts.length === 0) return false;
-  if (parts.length === 1) {
-    const only = sectionValue(parts[0] as string);
-    return only !== null && only === value;
-  }
-  const low = sectionValue(parts[0] as string);
-  const high = sectionValue(parts[parts.length - 1] as string);
-  if (low === null || high === null) return false;
-  return value >= Math.min(low, high) && value <= Math.max(low, high);
+export function loadStatuteTable(raw: unknown): StatuteEntry[] {
+  return unwrapRows(raw).filter(isStatuteEntry);
 }
 
-function entryMatchesToken(entry: StatuteEntry, token: string): boolean {
-  const old = String(entry?.old ?? "").trim();
-  if (old === token) return true;
-  const oldValue = sectionValue(old);
-  const tokenValue = sectionValue(token);
-  if (oldValue !== null && tokenValue !== null && oldValue === tokenValue) return true;
-  return matchesNewRange(token, String(entry?.new_range ?? ""));
+/** The identifier an entry answers to: its own `id`, or its `old` number. */
+function entryIdentifier(entry: StatuteEntry): string {
+  const declared = (entry as StatuteEntryWithId).id;
+  return isNonEmptyString(declared) ? declared.trim() : String(entry.old ?? "").trim();
 }
 
-// ---------------------------------------------------------------- citation
+const MAX_LABEL_LENGTH = 64;
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-function isAbsoluteHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+/**
+ * Render a rejected id for the reason string.
+ *
+ * The id is model output and the model can be driven by an injected
+ * instruction, so it is flattened (no control or format characters, which
+ * could smuggle structure into a log line or a UI string) and clipped before
+ * it is quoted back. The id is the ONLY part of the input that ever appears in
+ * a reason.
+ */
+function safeLabel(value: unknown): string {
+  if (typeof value !== "string") return `<${value === null ? "null" : typeof value}>`;
+  const flattened = value.replace(/[\p{Cc}\p{Cf}]+/gu, " ").replace(/\s+/gu, " ").trim();
+  const clipped =
+    flattened.length > MAX_LABEL_LENGTH ? `${flattened.slice(0, MAX_LABEL_LENGTH)}...` : flattened;
+  return `"${clipped}"`;
 }
 
 /**
- * null when the citation is well-formed enough to back a law claim; otherwise
- * a fragment naming what is wrong, for the `reason` string.
+ * Resolve a statute id against the table. Fails closed on every doubt.
+ *
+ * Matching is exact string equality after trimming - no normalization, no
+ * case folding, no prefix or fuzzy matching. An id either is in the table or
+ * is not. Fuzzy matching here would hand back a statute the model did not name
+ * and the user did not ask for, which is the failure this whole design exists
+ * to prevent.
  */
-function citationDefect(citation: Citation | undefined): string | null {
-  if (citation === undefined || citation === null) return "no citation";
-  const url = typeof citation.source_url === "string" ? citation.source_url.trim() : "";
-  if (url === "") return "an empty citation source_url";
-  if (!isAbsoluteHttpUrl(url)) {
-    return `a citation source_url that is not an absolute http(s) URL: "${url}"`;
+export function resolveStatuteId(id: string, statutes: StatuteEntry[]): StatuteResolution {
+  if (typeof id !== "string" || id.trim() === "") {
+    return { ok: false, reason: `statute id ${safeLabel(id)} is not a usable id` };
   }
-  const date = typeof citation.checked_date === "string" ? citation.checked_date.trim() : "";
-  if (date === "") return "an empty citation checked_date";
-  if (!ISO_DATE.test(date)) {
-    return `a citation checked_date that is not an ISO date: "${date}"`;
+  const wanted = id.trim();
+  const entries = Array.isArray(statutes) ? statutes : [];
+  const matches = entries.filter(
+    (entry) => isStatuteEntry(entry) && entryIdentifier(entry) === wanted,
+  );
+
+  if (matches.length === 0) {
+    return {
+      ok: false,
+      reason: `unknown statute id ${safeLabel(wanted)}; it is not in the statute table`,
+    };
   }
-  return null;
+  if (matches.length > 1) {
+    return {
+      ok: false,
+      reason: `statute id ${safeLabel(wanted)} is ambiguous: the statute table holds ${matches.length} entries for it`,
+    };
+  }
+
+  const entry = matches[0] as StatuteEntry;
+  if (entry.confirmed !== true) {
+    return {
+      ok: false,
+      reason: `statute id ${safeLabel(wanted)} is unconfirmed; a human has not opened the source`,
+    };
+  }
+
+  // Every field from the entry. Nothing from the caller.
+  return {
+    ok: true,
+    statute: {
+      id: entryIdentifier(entry),
+      old: entry.old,
+      new_range: entry.new_range,
+      title: entry.title,
+      source_url: entry.source_url,
+      checked_date: entry.checked_date,
+    },
+  };
 }
 
 // ------------------------------------------------------------------ gate
 
+/** The one reason the prose backstop can give. */
+export const PROSE_LAW_REASON = "law assertion in prose; law must be passed as statute_id";
+
 /**
- * The gate. Pass-through for anything that is not prose asserting law; for a
- * law claim, backing is required and anything short of it is dropped.
+ * The prose backstop. Prose is explanation; law travels as a statute id.
  *
- * When the text names several things, EVERY one of them must resolve to a
- * confirmed entry. One unconfirmed, unmapped or unresolvable reference drops
- * the whole claim, because the sentence the user reads is a single unit: we
- * cannot show them half of it.
- *
- * A token that resolves to more than one entry (a section that sits inside a
- * confirmed range but is also the `new_range` of an unconfirmed entry) is
- * resolved fail-closed: if any matching entry is unconfirmed, the claim drops.
+ * `statutes` is part of the frozen VerifierModule signature and is no longer
+ * consulted here: nothing on the prose path can be rescued by the table, since
+ * a law assertion in prose is wrong even when it happens to be true. Statute
+ * lookups go through `resolveStatuteId`.
  */
 export function verifyEvent(event: AgentEvent, statutes: StatuteEntry[]): VerifyResult {
+  void statutes;
   const text = typeof event?.text === "string" ? event.text : "";
 
   // point_to / highlight / mark_item carry no prose, and a draft_field or
   // add_note without text asserts nothing. Nothing to check.
   if (text.trim() === "") return { ok: true, event };
 
-  const normalized = normalizeForDetection(text);
-  if (!looksLikeLawClaim(text)) return { ok: true, event };
-
-  // (a) a well-formed citation backs the claim on its own.
-  const defect = citationDefect(event.citation);
-  if (defect === null) return { ok: true, event };
-
-  // (b) otherwise every law-like reference must resolve to a confirmed entry.
-  const references = collectReferences(normalized);
-  if (references.length === 0) {
-    return { ok: false, reason: `law claim with ${defect}` };
-  }
-
-  const entries = Array.isArray(statutes) ? statutes : [];
-  for (const reference of references) {
-    if (reference.kind === "bill") {
-      return {
-        ok: false,
-        reason: `law claim references ${reference.token}, which the statute map cannot back, and has ${defect}`,
-      };
-    }
-    if (reference.kind === "opaque") {
-      return {
-        ok: false,
-        reason: `law claim references "${reference.token}", which is not written in ASCII digits and cannot be checked against the statute map, and has ${defect}`,
-      };
-    }
-    const matches = entries.filter((entry) => entryMatchesToken(entry, reference.token));
-    if (matches.length === 0) {
-      return {
-        ok: false,
-        reason: `law claim cites ${reference.token}, which is not in the statute map`,
-      };
-    }
-    if (matches.some((entry) => entry.confirmed !== true)) {
-      return {
-        ok: false,
-        reason: `law claim cites ${reference.token}, whose mapping is unconfirmed`,
-      };
-    }
-  }
+  if (looksLikeLawClaim(text)) return { ok: false, reason: PROSE_LAW_REASON };
 
   return { ok: true, event };
 }
