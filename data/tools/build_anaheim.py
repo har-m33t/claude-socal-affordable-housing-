@@ -114,13 +114,15 @@ def main() -> int:
         # (unchanged from the city's download; the source URL is the third source below).
         # Team 2's viewer serves it; copy it under the app's public/ folder at integration.
         "checklist_pdf": "data/docs/anaheim-adu-checklist.pdf",
-        "sources": [
-            {"title": "ADU Anaheim (three ways to approve an ADU, incl. ADU Express)",
-             "url": ADU_PAGE, "checked_date": CHECKED},
-            {"title": "ADU Pre-Approved Plan Catalogue", "url": PLANS_PAGE, "checked_date": CHECKED},
-            {"title": "Accessory Dwelling Unit Submittal Requirements Checklist (Planning Services Division, NOV 2025, Z412)",
-             "url": CHECKLIST_URL, "checked_date": CHECKED},
-        ],
+        # city.schema.json: sources are plain URIs; titles and read dates go in notes.
+        "sources": [ADU_PAGE, PLANS_PAGE, CHECKLIST_URL],
+        "notes": (
+            f"All three sources read {CHECKED}: (1) ADU Anaheim page, three ways to approve an ADU "
+            "incl. ADU Express; (2) ADU Pre-Approved Plan Catalogue; (3) Accessory Dwelling Unit "
+            "Submittal Requirements Checklist, Planning Services Division, NOV 2025, form Z412. "
+            "Unknown: the ADU Express eligibility criteria (the city's Eligibility Tool does not "
+            "publish them). Anaheim's own pages disagree on ADU Express timing; see law-flags.json."
+        ),
         "fast_paths": FAST_PATHS,
         "checklist": checklist,
     }

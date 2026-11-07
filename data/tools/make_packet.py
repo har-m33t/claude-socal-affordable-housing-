@@ -91,11 +91,13 @@ def main() -> int:
     ]
     for name, _, title in DOCS:
         (OUT / name).write_bytes(pdf(header + [title]))
-    manifest = {
-        "about": "MADE UP applicant packet for the Pointer demo. No real person or property. "
-                 "Detached ADU with a new electric meter, no JADU, so the meter spot report "
-                 "is required. Intentionally missing: the site plan for the new address "
-                 "request, and the meter spot report.",
+    manifest = {  # packet.schema.json
+        "applicant": f"{a['name']} (made up)",
+        "synthetic": True,
+        "scenario": "MADE UP applicant packet for the Pointer demo. No real person or property. "
+                    "Detached ADU with a new electric meter, no JADU, so the meter spot report "
+                    "is required. Intentionally missing: the site plan for the new address "
+                    "request, and the meter spot report.",
         "files": [{"name": n, "declared_type": t} for n, t, _ in DOCS],
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Validate Team 1's data files.
 
-Usage:  python -I data/tools/validate.py
+Usage:  python -I data/tools/validate.py [--contracts DIR]
+
+--contracts points at a folder of *.schema.json (default: contracts/ at the repo root).
 
 If contracts/*.schema.json exist and the jsonschema package is installed, each
 file is also validated against its contract. The built-in checks below always
@@ -27,6 +29,8 @@ from pathlib import Path
 DATA = Path(__file__).resolve().parent.parent
 ROOT = DATA.parent
 CONTRACTS = ROOT / "contracts"
+if "--contracts" in sys.argv:
+    CONTRACTS = Path(sys.argv[sys.argv.index("--contracts") + 1]).resolve()
 
 errors: list[str] = []
 MISSING = object()
@@ -84,11 +88,12 @@ def check_city(path: Path, c: dict) -> None:
         err(path, "a city with checklist boxes needs checklist_pdf, the PDF the boxes refer to")
     if c.get("checklist_pdf") and not (ROOT / c["checklist_pdf"]).is_file():
         err(path, f"checklist_pdf not found: {c['checklist_pdf']}")
+    # city.schema.json: sources are plain URIs. checked_date covers them; notes names them.
     for s in c.get("sources", []):
-        if not str(s.get("url", "")).startswith("https://"):
-            err(path, f"source without https url: {s.get('title')}")
-        if c.get("verified") is True and not s.get("checked_date"):
-            err(path, f"verified city has an undated source: {s.get('title')}")
+        if not (isinstance(s, str) and s.startswith("https://")):
+            err(path, f"source must be an https URL string: {s!r}")
+    if c.get("verified") is True and not c.get("sources"):
+        err(path, "verified city needs at least one source")
     for fp in c.get("fast_paths", []):
         if not fp.get("source"):
             err(path, f"fast path {fp.get('id')} has no source")
@@ -115,12 +120,14 @@ def check_city(path: Path, c: dict) -> None:
 
 
 def check_statutes(path: Path, doc: dict) -> None:
-    for s in doc.get("statutes", []):
+    entries = doc.get("statutes", []) if isinstance(doc, dict) else doc
+    for s in entries:
         if not s.get("source_url"):
             err(path, f"{s.get('old')}: no source_url")
         if s.get("confirmed") and not s.get("checked_date"):
             err(path, f"{s.get('old')}: confirmed needs checked_date")
-        schema_check(path, s, "statute.schema.json")
+    # The contract describes the whole list; the {"about", "statutes": [...]} wrapper is approved (#3).
+    schema_check(path, doc.get("statutes", []) if isinstance(doc, dict) else doc, "statute.schema.json")
 
 
 def check_type(path: Path, t: dict) -> None:
@@ -152,8 +159,8 @@ def check_flags(path: Path, doc: dict, cities: dict[str, dict]) -> None:
 
 
 def check_packet(path: Path, p: dict, doc_types: set[str]) -> None:
-    if "made up" not in p.get("about", "").lower():
-        err(path, "packet 'about' must say the applicant is made up")
+    if p.get("synthetic") is not True:
+        err(path, "packet must set synthetic: true (the applicant is made up)")
     for n, f in enumerate(p.get("files", [])):
         name = f.get("name")
         if not name:
@@ -163,7 +170,7 @@ def check_packet(path: Path, p: dict, doc_types: set[str]) -> None:
             err(path, f"listed file missing: {name}")
         if f.get("declared_type") not in doc_types | {"unknown"}:
             err(path, f"{name}: declared_type {f.get('declared_type')} is not a checklist doc_type")
-    schema_check(path, {"files": p.get("files", [])}, "packet.schema.json")
+    schema_check(path, p, "packet.schema.json")
 
 
 def main() -> int:

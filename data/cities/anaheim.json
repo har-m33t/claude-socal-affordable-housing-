@@ -4,22 +4,11 @@
   "checked_date": "2026-11-07",
   "checklist_pdf": "data/docs/anaheim-adu-checklist.pdf",
   "sources": [
-    {
-      "title": "ADU Anaheim (three ways to approve an ADU, incl. ADU Express)",
-      "url": "https://www.anaheim.net/6349/ADU-Anaheim",
-      "checked_date": "2026-11-07"
-    },
-    {
-      "title": "ADU Pre-Approved Plan Catalogue",
-      "url": "https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue",
-      "checked_date": "2026-11-07"
-    },
-    {
-      "title": "Accessory Dwelling Unit Submittal Requirements Checklist (Planning Services Division, NOV 2025, Z412)",
-      "url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
-      "checked_date": "2026-11-07"
-    }
+    "https://www.anaheim.net/6349/ADU-Anaheim",
+    "https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue",
+    "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
   ],
+  "notes": "All three sources read 2026-11-07: (1) ADU Anaheim page, three ways to approve an ADU incl. ADU Express; (2) ADU Pre-Approved Plan Catalogue; (3) Accessory Dwelling Unit Submittal Requirements Checklist, Planning Services Division, NOV 2025, form Z412. Unknown: the ADU Express eligibility criteria (the city's Eligibility Tool does not publish them). Anaheim's own pages disagree on ADU Express timing; see law-flags.json.",
   "fast_paths": [
     {
       "id": "adu-express",
