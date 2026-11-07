@@ -31,7 +31,9 @@ node_modules/
 out/
 next-env.d.ts
 *.tsbuildinfo
-coverage/
+# Anchored: unanchored `coverage/` also matched components/coverage/, so new
+# UI files there vanished from git status instead of being tracked.
+/coverage/
 npm-debug.log*
 
 # Python
