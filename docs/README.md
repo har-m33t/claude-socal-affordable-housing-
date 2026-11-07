@@ -7,6 +7,10 @@ Polished write-ups live here. Suggested files as research progresses:
 - `county-profiles/`: one file per county with key stats
 - `how-to-apply.md`: practical guide to finding and applying for affordable units
 
+## Project plans
+
+- [`pointer-adu-copilot-build-plan.md`](pointer-adu-copilot-build-plan.md): Pointer, an ADU permit copilot for Anaheim — positioning, scope, build, security layer, and the four-team split
+
 ## Agent documentation
 
 Process docs, not research write-ups:
