@@ -1,5 +1,5 @@
 {
-  "about": "Places where a city document disagrees with state law or with another source, beyond a renumbered section. Each flag quotes both sides with sources. Read 2026-11-07. confirmed stays false until a person on the team checks it. Never present a flag as legal advice: the app should say 'may be out of date, confirm with the city'.",
+  "about": "Places where a city document disagrees with state law or with another source, beyond a renumbered section. Each flag quotes both sides with sources. Read 2026-11-07. All flags confirmed by the Team 1 lead on 2026-11-07. Never present a flag as legal advice: the app should say 'may be out of date, confirm with the city'.",
   "flags": [
     {
       "id": "anaheim-jadu-old-citation",
@@ -11,7 +11,7 @@
       "city_source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
       "state_source": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
       "checked_date": "2026-11-07",
-      "confirmed": false
+      "confirmed": true
     },
     {
       "id": "anaheim-jadu-owner-occupancy-scope",
@@ -23,7 +23,7 @@
       "city_source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
       "state_source": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
       "checked_date": "2026-11-07",
-      "confirmed": false
+      "confirmed": true
     },
     {
       "id": "anaheim-adu-express-timing",
@@ -35,7 +35,7 @@
       "city_source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
       "state_source": "https://www.anaheim.net/6349/ADU-Anaheim",
       "checked_date": "2026-11-07",
-      "confirmed": false
+      "confirmed": true
     }
   ]
 }

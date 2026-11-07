@@ -1,6 +1,6 @@
 # Pointer data (Team 1)
 
-Read 2026-11-07. Anaheim (`verified: true`) and all of `statutes.json` (`confirmed: true`) were
+Read 2026-11-07. Anaheim, `types/adu.json`, all of `statutes.json` and all of `law-flags.json` were
 reviewed by the Team 1 lead on 2026-11-07. Everything else stays unverified until a person on the team
 has checked it. The app must show "not yet verified" for anything unverified and give no advice
 from it.

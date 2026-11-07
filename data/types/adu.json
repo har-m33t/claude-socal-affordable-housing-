@@ -1,9 +1,9 @@
 {
   "type": "adu",
   "name": "Accessory dwelling unit (ADU)",
-  "verified": false,
+  "verified": true,
   "checked_date": "2026-11-07",
-  "about": "Project-type pack for ADUs and JADUs. Every entry is quoted from the HCD ADU Handbook (March 2026), read 2026-11-07 from data/raw/hcd-adu-handbook-2026-03.pdf. Note: the organizers' data list put the 60-day deadline in Gov Code 66314; the Handbook cites 66317(a)(3) for it, so this pack follows the Handbook. verified stays false until a person on the team reviews this pack.",
+  "about": "Project-type pack for ADUs and JADUs. Every entry is quoted from the HCD ADU Handbook (March 2026), read 2026-11-07 from data/raw/hcd-adu-handbook-2026-03.pdf. Note: the organizers' data list put the 60-day deadline in Gov Code 66314; the Handbook cites 66317(a)(3) for it, so this pack follows the Handbook. Reviewed and verified by the Team 1 lead on 2026-11-07.",
   "handbook": {
     "title": "HCD Accessory Dwelling Unit Handbook (March 2026)",
     "url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
@@ -14,25 +14,25 @@
       "section": "66310-66342",
       "title": "State ADU and JADU law (formerly 65852.2, 65852.22, 65852.23, 65852.26), Handbook p. 13",
       "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
-      "confirmed": false
+      "confirmed": true
     },
     {
       "section": "66314-66331",
       "title": "ADU approval standards. Cited for pre-approved plan programs, which local agencies had to create by January 1, 2025: 'approve or deny applications pursuant to standards established in Government Code sections 66314-66331', Handbook p. 13",
       "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
-      "confirmed": false
+      "confirmed": true
     },
     {
       "section": "66333-66339",
       "title": "JADU law: 'JADUs must also comply with the provisions of JADU Law found in Government Code sections 66333-66339', Handbook p. 16",
       "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=16",
-      "confirmed": false
+      "confirmed": true
     },
     {
       "section": "66333(b)",
       "title": "JADU owner occupancy: required only if the JADU shares sanitation facilities with the primary structure (2025 change), Handbook p. 14",
       "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
-      "confirmed": false
+      "confirmed": true
     }
   ],
   "clocks": [
@@ -42,7 +42,7 @@
       "days": 60,
       "statute": "66317(a)(3)",
       "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11",
-      "confirmed": false
+      "confirmed": true
     },
     {
       "id": "denial-comments",
@@ -50,7 +50,7 @@
       "days": 60,
       "statute": "66317(b)",
       "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11",
-      "confirmed": false
+      "confirmed": true
     }
   ]
 }
