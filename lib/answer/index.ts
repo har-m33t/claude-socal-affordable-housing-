@@ -1,12 +1,12 @@
-// STUB (lead scaffold). Owned by the sidebar lane: local retrieval and live (/api/agent)
-// answer providers. The contract is AnswerProvider in components/pointer/answer.ts.
+// Where answers come from. Local retrieval over the plan's own text is the default
+// and works offline; set NEXT_PUBLIC_POINTER_ANSWERS=live to ask /api/agent
+// (which itself falls back to local when the agent can't answer).
 import type { AnswerProvider } from "@/components/pointer/answer";
+import { createLiveProvider } from "./live";
+import { createLocalProvider } from "./local";
 
 export function getAnswerProvider(): AnswerProvider {
-  return {
-    name: "local",
-    async ask() {
-      return { kind: "not_found", text: "Answers are not wired up yet.", sources: [] };
-    },
-  };
+  return process.env.NEXT_PUBLIC_POINTER_ANSWERS === "live" ? createLiveProvider() : createLocalProvider();
 }
+
+export { createLiveProvider, createLocalProvider };
