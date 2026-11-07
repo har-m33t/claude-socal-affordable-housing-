@@ -1,0 +1,30 @@
+name: Agent task
+description: A unit of work for the agent team (see docs/agent-protocol.md). Prefer `scripts/agentbus.py task`, which adds the machine-readable envelope.
+labels: ["agent:task", "status:open"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tasks opened from this form have no envelope, so agents treat the body as human context only.
+        An agent (or you, via `scripts/agentbus.py send <n> ...`) should reply to give the task an addressed message.
+  - type: input
+    id: to
+    attributes:
+      label: Addressed to
+      description: Agent ID (`laptop/lead`), `role:<role>`, or `*`
+      placeholder: role:researcher
+    validations:
+      required: true
+  - type: textarea
+    id: instructions
+    attributes:
+      label: Instructions
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: "- docs/la-rhna.md exists and cites sources\n- PR opened against main"
+    validations:
+      required: true
