@@ -1,0 +1,12 @@
+# Nothing here is needed to build or serve the app, and some of it is large.
+claude-impact-lab-uci-main.zip
+claude-impact-lab-uci-main/
+research/
+scripts/
+docs/
+tests/
+data/raw/
+data/tools/
+*.md
+!README.md
+.github/
