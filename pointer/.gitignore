@@ -1,4 +1,6 @@
-node_modules/
+# No trailing slash: a directory-only pattern does not match the
+# node_modules SYMLINK each lane worktree uses to share one install.
+node_modules
 .next/
 next-env.d.ts
 *.tsbuildinfo

@@ -21,21 +21,50 @@ export type ToolName = (typeof TOOL_NAMES)[number];
 export const ITEM_STATUSES = ["complete", "missing", "unknown"] as const;
 export type ItemStatus = (typeof ITEM_STATUSES)[number];
 
-export interface Citation {
+/**
+ * SERVER-RENDERED statute reference. Present only when the model passed a
+ * `statute_id` that resolved against a statutes.json entry with
+ * `confirmed: true`. Every field is copied from that entry and none is ever
+ * taken from model output.
+ *
+ * This is the ONLY channel through which law reaches the UI. The model cannot
+ * supply a citation, and prose asserting law is dropped by the backstop
+ * detector in verifier.ts. A statute number appearing in `text` is a bug.
+ */
+export interface StatuteRef {
+  id: string;
+  old: string;
+  new_range: string;
+  title: string;
   source_url: string;
   checked_date: string;
-  detail?: string;
 }
 
 /** One agent action. Matches contracts/event.schema.json exactly. */
 export interface AgentEvent {
   tool: ToolName;
-  item_id: string;
+  /**
+   * Required for point_to, highlight, mark_item and draft_field. May be null or
+   * omitted for `add_note` only, which can be a general note with no item.
+   */
+  item_id?: string | null;
   status?: ItemStatus;
   text?: string;
-  citation?: Citation;
+  statute_ref?: StatuteRef;
   ts: string;
 }
+
+/** What the model may pass. `statute_id` names an entry; it never carries law. */
+export interface ToolInput {
+  item_id?: string | null;
+  status?: ItemStatus;
+  text?: string;
+  statute_id?: string;
+}
+
+export type StatuteResolution =
+  | { ok: true; statute: StatuteRef }
+  | { ok: false; reason: string };
 
 /**
  * What the route streams. Every SSE `data:` payload is one StreamFrame.
@@ -79,6 +108,9 @@ export interface CityConfig {
 }
 
 export interface StatuteEntry {
+  /** Stable slug the model names in statute_id. Falls back to `old` when absent. */
+  id?: string;
+  quote?: string;
   old: string;
   new_range: string;
   title: string;
@@ -136,6 +168,10 @@ export type VerifyResult =
 export interface VerifierModule {
   verifyEvent(event: AgentEvent, statutes: StatuteEntry[]): VerifyResult;
   looksLikeLawClaim(text: string): boolean;
+  /** Accepts a bare array or Team 1's {about, statutes:[...]} wrapper. */
+  loadStatuteTable(raw: unknown): StatuteEntry[];
+  /** Fails closed: unknown or unconfirmed id resolves to an error. */
+  resolveStatuteId(id: string, statutes: StatuteEntry[]): StatuteResolution;
 }
 
 export interface RecorderHandle {
