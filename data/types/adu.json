@@ -1,0 +1,42 @@
+{
+  "type": "adu",
+  "name": "Accessory dwelling unit (ADU)",
+  "verified": false,
+  "checked_date": null,
+  "about": "Project-type pack for ADUs. Entries come from the organizers' Lane 2 data list (checked by organizers 2026-11-06). Team 1 has not yet read the statute or the HCD ADU Handbook; verified stays false until a person does and fills checked_date.",
+  "handbook": {
+    "title": "HCD ADU Handbook (March 2026)",
+    "url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
+    "translations_url": "https://www.hcd.ca.gov/building-standards/adu/handbook"
+  },
+  "statutes": [
+    {
+      "section": "66310-66342",
+      "title": "ADU law (formerly Gov Code 65852.2)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
+      "confirmed": false
+    },
+    {
+      "section": "66314",
+      "title": "ADU approvals: ministerial, 60 days",
+      "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=66314",
+      "confirmed": false
+    },
+    {
+      "section": "66333",
+      "title": "JADU",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf",
+      "confirmed": false
+    }
+  ],
+  "clocks": [
+    {
+      "id": "state-approval-deadline",
+      "description": "State deadline for the city to act on a complete ADU application",
+      "days": 60,
+      "statute": "66314",
+      "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=66314",
+      "confirmed": false
+    }
+  ]
+}

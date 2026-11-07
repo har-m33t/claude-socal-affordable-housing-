@@ -1,0 +1,22 @@
+{
+  "type": "sb9",
+  "name": "SB 9 two-unit development and urban lot split",
+  "verified": false,
+  "checked_date": null,
+  "about": "STUB: rules not yet verified. Shown in the demo only as a stub. The two statute rows come from the organizers' Lane 2 data list (checked by organizers 2026-11-06); nobody on Team 1 has read them. No clocks are listed until someone does.",
+  "statutes": [
+    {
+      "section": "65852.21",
+      "title": "SB 9 two-unit development (ministerial approval)",
+      "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=65852.21",
+      "confirmed": false
+    },
+    {
+      "section": "66411.7",
+      "title": "SB 9 urban lot split",
+      "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=66411.7",
+      "confirmed": false
+    }
+  ],
+  "clocks": []
+}

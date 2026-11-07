@@ -1,0 +1,12 @@
+{
+  "about": "MADE UP. Not a real person, address or parcel. For demo and redaction tests only.",
+  "name": "Maria Ejemplo",
+  "co_owner": "Daniel Ejemplo",
+  "street": "1234 Placeholder Lane",
+  "city": "Anaheim",
+  "state": "CA",
+  "zip": "00000",
+  "apn": "000-000-00",
+  "phone": "714-555-0142",
+  "email": "maria.ejemplo@example.com"
+}

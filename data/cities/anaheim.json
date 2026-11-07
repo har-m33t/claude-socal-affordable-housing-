@@ -1,0 +1,37 @@
+{
+  "city": "Anaheim",
+  "verified": false,
+  "checked_date": null,
+  "sources": [
+    {
+      "title": "ADU Anaheim (three review tracks, incl. ADU Express)",
+      "url": "https://www.anaheim.net/6349/ADU-Anaheim",
+      "checked_date": null
+    },
+    {
+      "title": "Pre-Approved Plan Catalogue",
+      "url": "https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue",
+      "checked_date": null
+    },
+    {
+      "title": "Accessory Dwelling Unit Submittal Requirements Checklist (Nov 2025)",
+      "url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
+      "checked_date": null
+    }
+  ],
+  "fast_paths": [
+    {
+      "id": "adu-express",
+      "name": "ADU Express",
+      "rules": [],
+      "source": "https://www.anaheim.net/6349/ADU-Anaheim"
+    },
+    {
+      "id": "pre-approved-plans",
+      "name": "Pre-Approved Plan Catalogue",
+      "rules": [],
+      "source": "https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue"
+    }
+  ],
+  "checklist": []
+}

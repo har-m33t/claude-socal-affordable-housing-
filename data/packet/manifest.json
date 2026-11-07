@@ -1,0 +1,21 @@
+{
+  "about": "MADE UP applicant packet for the Pointer demo. No real person or property. The site plan is intentionally missing.",
+  "files": [
+    {
+      "name": "floor-plan.pdf",
+      "declared_type": "floor_plan"
+    },
+    {
+      "name": "elevations.pdf",
+      "declared_type": "elevations"
+    },
+    {
+      "name": "owner-affidavit.pdf",
+      "declared_type": "owner_affidavit"
+    },
+    {
+      "name": "utility-letter.pdf",
+      "declared_type": "unknown"
+    }
+  ]
+}
