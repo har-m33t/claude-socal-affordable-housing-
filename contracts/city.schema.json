@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pointer/contracts/city.schema.json",
+  "title": "City configuration",
+  "description": "One city's checklist and fast paths. FROZEN 11:55. A city with verified:false never produces advice.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "city",
+    "verified",
+    "checked_date",
+    "sources",
+    "fast_paths",
+    "checklist"
+  ],
+  "properties": {
+    "city": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verified": {
+      "type": "boolean",
+      "description": "True only after a person read the checklist and filled checked_date."
+    },
+    "checked_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free text for humans. What is unknown and why."
+    },
+    "fast_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "rules",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Verbatim from the city page. Never paraphrased, never invented."
+          },
+          "source": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "text",
+          "page",
+          "box",
+          "doc_type",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "1-indexed PDF page. null = not yet extracted."
+          },
+          "box": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "[x, y, w, h] in PDF points. null = not yet measured; the hand cannot point at it.",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "doc_type": {
+            "type": "string",
+            "description": "Which document in the packet satisfies this item, or \"unknown\"."
+          },
+          "source": {
+            "type": "string",
+            "format": "uri"
+          },
+          "applies_to": {
+            "enum": [
+              "adu_and_jadu",
+              "jadu"
+            ],
+            "description": "Optional. Which project the item applies to. Added for Team 1."
+          }
+        }
+      }
+    }
+  }
+}

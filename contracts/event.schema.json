@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pointer/contracts/event.schema.json",
+  "title": "Agent action event",
+  "description": "One action the agent took, streamed to the browser. Law travels ONLY in server-rendered statute_ref; prose asserting law is dropped. The model cannot supply a citation. FROZEN - changing this breaks every team.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool",
+    "ts"
+  ],
+  "properties": {
+    "tool": {
+      "enum": [
+        "point_to",
+        "highlight",
+        "mark_item",
+        "draft_field",
+        "add_note"
+      ]
+    },
+    "item_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "description": "A checklist item id that exists in the loaded city file. REQUIRED for point_to, highlight, mark_item and draft_field. OPTIONAL (omitted or null) for add_note only, which may be a general note with no item."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "missing",
+        "unknown"
+      ],
+      "description": "mark_item only."
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "draft_field and add_note only. Shown as an accept/reject suggestion."
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "statute_ref": {
+      "$ref": "#/$defs/statute_ref",
+      "description": "SERVER-RENDERED. Present only when the model passed a statute_id that resolved against a statutes.json entry with confirmed:true. Every field is copied from that entry; none is ever taken from model output. This is the ONLY channel through which law reaches the UI."
+    }
+  },
+  "$defs": {
+    "statute_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "old",
+        "new_range",
+        "title",
+        "source_url",
+        "checked_date"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "old": {
+          "type": "string"
+        },
+        "new_range": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "checked_date": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    }
+  }
+}

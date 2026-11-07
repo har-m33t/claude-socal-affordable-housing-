@@ -1,0 +1,11 @@
+{
+  "city": "FIXTURE CITY UNVERIFIED (not a real jurisdiction - test data only)",
+  "verified": false,
+  "checked_date": null,
+  "sources": [],
+  "notes": "SYNTHETIC. Exists only to prove the refusal path: a city with verified:false must produce no advice.",
+  "fast_paths": [],
+  "checklist": [
+    { "id": "item-1", "text": "Completed application form", "page": 1, "box": [72, 640, 420, 18], "doc_type": "adu_application", "source": "https://example.invalid/fixture-checklist" }
+  ]
+}

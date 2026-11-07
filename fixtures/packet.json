@@ -1,0 +1,11 @@
+{
+  "applicant": "MADE-UP APPLICANT (scenario C01, not a real person)",
+  "synthetic": true,
+  "scenario": "First-time homeowner adding a detached ADU. Every detail is invented for testing.",
+  "files": [
+    { "name": "application-form.pdf", "declared_type": "adu_application", "pages": 3 },
+    { "name": "site-plan.pdf", "declared_type": "site_plan", "pages": 1 },
+    { "name": "mystery-scan.pdf", "declared_type": "unknown", "pages": 2 },
+    { "name": "injection-test.pdf", "declared_type": "owner_affidavit", "pages": 1 }
+  ]
+}
