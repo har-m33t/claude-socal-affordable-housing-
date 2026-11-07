@@ -36,6 +36,7 @@ import { verifyEvent } from "./verifier";
 import * as verifierModule from "./verifier";
 import { createRecorder } from "./recorder";
 import { loadReplay } from "./replay";
+import { loadPlansForCity, mergePlanTargets } from "../plan/load";
 
 import {
   DEFAULT_EFFORT,
@@ -182,10 +183,16 @@ async function readJsonFile<T>(file: string): Promise<T> {
   return JSON.parse(await readFile(file, "utf8")) as T;
 }
 
+/**
+ * The city file, with the city's plan targets (ADU Express form fields, other
+ * city PDFs) merged into its checklist so they are valid item_ids too. The
+ * verified flag, sources and fast paths come from the city file alone.
+ */
 export async function loadCityFromDisk(appRoot: string, city: string): Promise<CityConfig> {
   const slug = slugify(city);
   if (!SLUG.test(slug)) throw new Error("unusable city name");
-  return readJsonFile<CityConfig>(nodePath.join(appRoot, "data", "cities", `${slug}.json`));
+  const config = await readJsonFile<CityConfig>(nodePath.join(appRoot, "data", "cities", `${slug}.json`));
+  return mergePlanTargets(config, await loadPlansForCity(appRoot, slug));
 }
 
 export async function loadPackFromDisk(

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- Pointer cursor (arrow-click). Outlined arrow after GitHub's homepage product demo. Hotspot: tip at (4,3). -->
+  <defs>
+    <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="0.7" flood-color="#1f2328" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <path filter="url(#s)" d="M4 3 L4 18.6 L8.1 14.8 L10.8 20.7 Q11.1 21.3 11.7 21.05 L13.55 20.25 Q14.15 19.95 13.9 19.35 L11.25 13.55 L16.9 13.35 Z" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

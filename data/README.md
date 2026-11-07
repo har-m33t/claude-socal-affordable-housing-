@@ -17,9 +17,19 @@ from it.
 | `packet/` | **Made-up** applicant: `manifest.json`, `applicant.json` (values redaction must catch), 3 PDFs |
 | `docs/anaheim-adu-checklist.pdf` | Unchanged copy of Anaheim's public Nov 2025 checklist, the PDF the boxes refer to. `anaheim.json` points at it with `checklist_pdf`; copy it under the app's `public/` at integration |
 | `processed/anaheim-adu-checklist-lines.json` | Every text line of the checklist PDF with page and box |
+| `docs/anaheim-adu-express-application.pdf` | Unchanged copy of Anaheim's ADU Express Application, "Revised 10/2/2025" (1 page), from https://www.anaheim.net/DocumentCenter/View/49140/, read 2026-11-07. Also served from `public/data/docs/` |
+| `docs/anaheim-b802-impact-fees.pdf` | Unchanged copy of Anaheim's Developer Impact Fees sheet, B802, OCT 2026 (3 pages), from https://www.anaheim.net/DocumentCenter/View/39711/Developer-Impact-Fees---B802, read 2026-11-07. Also served from `public/data/docs/` |
+| `processed/anaheim-adu-express-application-lines.json`, `processed/anaheim-b802-impact-fees-lines.json` | Text lines of the two PDFs above, from `tools/extract-pdf-lines.mjs` |
+| `plans/anaheim-adu.json` | The multi-step plan (`contracts/plan.schema.json`): 4 documents, 38 targets, 13 steps. Target texts are verbatim from the lines files; form-field boxes are the form's table cells (label plus blank), measured from the PDF's drawn rules. The server merges its PDF targets into the city checklist (`lib/plan/load.ts`) so they are valid agent item_ids. `fixtures/plan-run.json` is the scripted run over it |
 
 **Boxes** are `[x, y, w, h]` in PDF points at scale 1, origin top-left (pdf.js viewport
 coordinates). Multiply by the render scale.
+
+**`tools/extract-pdf-lines.mjs`** (Node, pdf.js; no Python deps) writes the same lines format with the
+same box convention: `node data/tools/extract-pdf-lines.mjs <in.pdf> <out-lines.json>`. Checked against
+Z412: x matches PyMuPDF exactly, y is top-left; pdf.js boxes are the font's em box, so they sit about
+3 pt lower and 3-4 pt shorter than PyMuPDF's (e.g. "Overview" `[36.0, 121.3, 50.4, 16.7]` vs
+`[36, 124.8, 47.8, 12]`). Plan boxes are drawn with a little padding, so this does not matter for pointing.
 
 **Fields beyond the plan's contract:** cities carry `checklist_pdf` (proposed by Team 2); checklist
 items carry `applies_to` (`adu_and_jadu` or `jadu`). `statutes.json` wraps its entries in `{"about", "statutes": [...]}`.

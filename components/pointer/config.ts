@@ -12,8 +12,10 @@
 // exactly what is missing instead of going quiet.
 import typeAdu from "@/data/types/adu.json";
 import typesFixture from "@/fixtures/mock-types.json";
-import packetFixture from "@/fixtures/mock-packet.json";
-import eventsFixture from "@/fixtures/mock-events.json";
+import packetManifest from "@/data/packet/manifest.json";
+import planRunFixture from "@/fixtures/plan-run.json";
+import planAnaheimAdu from "@/data/plans/anaheim-adu.json";
+import { checkPlan, type Plan } from "./plan";
 import {
   isSafeUrl,
   normalizeSource,
@@ -431,7 +433,8 @@ export const PROJECT_TYPES: ProjectType[] = (typesFixture.types as ProjectType[]
   t.type === "adu" ? { ...t, verified: Boolean((typeAdu as { verified?: boolean }).verified) } : t,
 );
 
-export const PACKET_FILES: PacketFile[] = packetFixture.files as PacketFile[];
+/** The made-up applicant's files (Team 1's packet manifest), the same files the plan's file slots name. */
+export const PACKET_FILES: PacketFile[] = packetManifest.files as PacketFile[];
 
 /**
  * The city the editor opens on: the first verified city there is. Not a name —
@@ -442,9 +445,9 @@ export const PACKET_FILES: PacketFile[] = packetFixture.files as PacketFile[];
 export const DEFAULT_CITY: string = VERIFIED_CITIES[0] ?? CITY_NAMES[0] ?? "";
 export const DEFAULT_TYPE = "adu";
 
-/** Mock events, validated. Malformed rows are dropped and counted so the UI can show it. */
+/** The scripted plan run (fixtures/plan-run.json), validated. Malformed rows are dropped and counted so the UI can show it. */
 export function loadMockEvents(): { events: AgentEvent[]; dropped: number } {
-  const raw = (eventsFixture as { events: unknown[] }).events;
+  const raw = (planRunFixture as { events: unknown[] }).events;
   const events: AgentEvent[] = [];
   let dropped = 0;
   for (const r of raw) {
@@ -454,3 +457,11 @@ export function loadMockEvents(): { events: AgentEvent[]; dropped: number } {
   }
   return { events, dropped };
 }
+
+/** The multi-step plan for the default city and type. Invalid plans throw at load. */
+export const PLAN: Plan = (() => {
+  const plan = planAnaheimAdu as unknown as Plan;
+  const problems = checkPlan(plan);
+  if (problems.length) throw new Error(`data/plans/anaheim-adu.json is invalid: ${problems.join("; ")}`);
+  return plan;
+})();

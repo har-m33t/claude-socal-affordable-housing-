@@ -2,8 +2,8 @@
 // Plays a list of agent events into RunState on a timer. This is the mock seam: at
 // integration, Team 3's SSE stream can call `push(event)` instead of using the timer.
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import type { AgentEvent, CityConfig } from "./contract";
-import { applyEvent, decide, initialRunState, saveDecisions, type RunState } from "./run-state";
+import type { AgentEvent } from "./contract";
+import { applyEvent, decide, initialRunState, saveDecisions, type RunState, type TargetScope } from "./run-state";
 
 export type PlayState = "idle" | "playing" | "paused" | "stopped" | "done";
 
@@ -14,7 +14,7 @@ interface S {
 }
 
 type A =
-  | { type: "advance"; event: AgentEvent; city: CityConfig }
+  | { type: "advance"; event: AgentEvent; city: TargetScope }
   | { type: "play" }
   | { type: "pause" }
   | { type: "stop" }
@@ -53,7 +53,7 @@ function gapMs(prev: AgentEvent | undefined, next: AgentEvent, speed: number): n
   return ms / speed;
 }
 
-export function useReplay(events: AgentEvent[], city: CityConfig | undefined, speed = 1) {
+export function useReplay(events: AgentEvent[], city: TargetScope | undefined, speed = 1) {
   const [s, dispatch] = useReducer(reducer, { run: initialRunState(), cursor: 0, play: "idle" });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

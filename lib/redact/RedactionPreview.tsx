@@ -14,6 +14,11 @@ export interface RedactionPreviewProps {
   className?: string;
   /** Heading for the panel. */
   title?: string;
+  /**
+   * Heading for the "after" pane. Defaults to "After (what is sent to Claude)"; pass
+   * something else where nothing is sent yet (e.g. adding a file to the board).
+   */
+  afterLabel?: string;
 }
 
 const KIND_LABEL: Record<RedactionKind, [singular: string, plural: string]> = {
@@ -89,6 +94,7 @@ export function RedactionPreview({
   spans,
   className,
   title = "What leaves your device",
+  afterLabel = "After (what is sent to Claude)",
 }: RedactionPreviewProps) {
   const id = useId();
   const counts = countByKind(spans);
@@ -132,7 +138,7 @@ export function RedactionPreview({
         </section>
         <section aria-labelledby={`${id}-after`} data-pane="after">
           <h3 id={`${id}-after`} className="mb-1 font-serif text-base">
-            After (what is sent to Claude)
+            {afterLabel}
           </h3>
           <pre className={paneClass}>{renderAfter(redacted)}</pre>
         </section>

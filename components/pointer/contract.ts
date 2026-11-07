@@ -21,13 +21,28 @@ export interface Citation {
   quote?: string;
 }
 
-/** contracts/event.schema.json: one agent action `{tool, item_id, status?, text?, citation?, ts}`. */
+/**
+ * SERVER-RENDERED law reference (contracts/event.schema.json $defs.statute_ref). Every field
+ * is copied from a confirmed data/statutes.json entry; the model never supplies law.
+ */
+export interface StatuteRef {
+  id: string;
+  old: string;
+  new_range: string;
+  title: string;
+  source_url: string;
+  checked_date: string;
+}
+
+/** contracts/event.schema.json: one agent action `{tool, item_id, status?, text?, statute_ref?, ts}`. */
 export interface AgentEvent {
   tool: Tool;
   item_id: string;
   status?: ItemStatus;
   text?: string;
+  /** Legacy field; parseEvent rejects it on the wire. Kept so old fixtures type-check. */
   citation?: RawCitation;
+  statute_ref?: StatuteRef;
   ts: string;
 }
 
