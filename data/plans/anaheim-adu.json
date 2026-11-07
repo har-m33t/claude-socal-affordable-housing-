@@ -1,5 +1,5 @@
 {
-  "about": "v0 plan (lead scaffold) built only from data already in the repo: Team 1's six Anaheim checklist items (read from the Nov 2025 PDF) and the made-up applicant's packet. The data lane extends it with more documents. Target texts are verbatim from their documents.",
+  "about": "Multi-step plan for a detached ADU in Anaheim. Documents: the made-up applicant's packet; Anaheim's ADU Submittal Requirements Checklist (Z412, Nov 2025); the ADU Express Application (Revised 10/2/2025); and Developer Impact Fees B802 (Oct 2026). Target texts are verbatim from their documents' text layers (data/processed/*-lines.json); boxes are [x, y, w, h] in PDF points, top-left origin. Z412 boxes are Team 1's; form boxes are the form's table cells (label plus blank); the B802 box is the ADU row and its note. Packet target texts are file names and declared types from data/packet/manifest.json.",
   "city": "Anaheim",
   "project_type": "adu",
   "checked_date": "2026-11-07",
@@ -16,6 +16,22 @@
       "kind": "pdf",
       "url": "/data/docs/anaheim-adu-checklist.pdf",
       "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist",
+      "checked_date": "2026-11-07"
+    },
+    {
+      "id": "express",
+      "title": "ADU Express Application (Revised 10/2/2025)",
+      "kind": "pdf",
+      "url": "/data/docs/anaheim-adu-express-application.pdf",
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/",
+      "checked_date": "2026-11-07"
+    },
+    {
+      "id": "b802",
+      "title": "Developer Impact Fees, B802 (Oct 2026)",
+      "kind": "pdf",
+      "url": "/data/docs/anaheim-b802-impact-fees.pdf",
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/39711/Developer-Impact-Fees---B802",
       "checked_date": "2026-11-07"
     }
   ],
@@ -37,6 +53,40 @@
       "doc": "packet",
       "label": "floor-plan.pdf",
       "text": "floor-plan.pdf (declared type: unknown). Made-up applicant file."
+    },
+    {
+      "id": "packet-summary",
+      "doc": "packet",
+      "label": "Your packet, all files",
+      "text": "3 files: sewer-capacity-email.pdf (sewer_capacity_verification), new-address-request.pdf (new_address_request), floor-plan.pdf (unknown). Made-up applicant files."
+    },
+    {
+      "id": "z412-overview",
+      "doc": "z412",
+      "label": "Checklist overview",
+      "text": "Planning staff reviews Accessory Dwelling Units (ADUs) and Junior Accessory Dwelling Units (JADUs) to determine compliance with applicable zoning code requirements during the Building Division’s plan check review process. This checklist provides an overview of the Planning Services Division’s submittal requirements, in addition to the Building Division’s plan submittal requirements. All accessory dwelling unit requirements can be found in Anaheim Municipal Code (AMC) Section 18.38.015. Visit Anaheim.net/ADUheim for detailed information on developing ADUs in Anaheim and for updates on special programs and incentives that support ADU development.",
+      "page": 1,
+      "box": [
+        36.0,
+        121.3,
+        538.0,
+        96.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "adu-express-program",
+      "doc": "z412",
+      "label": "ADU Express Program",
+      "text": "For new detached ADUs, your property may be eligible for the ADU Express Program which provides one day permitting and zero design costs. Visit Anaheim.net/ADUexpress for more information.",
+      "page": 1,
+      "box": [
+        54.0,
+        203.4,
+        520.0,
+        42.0
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
     },
     {
       "id": "sewer-capacity-verification",
@@ -121,6 +171,370 @@
         27.5
       ],
       "source_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "express-project-address",
+      "doc": "express",
+      "label": "Project address",
+      "text": "Project Address:",
+      "page": 1,
+      "box": [
+        43.4,
+        101.3,
+        525.0,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-adu-address",
+      "doc": "express",
+      "label": "ADU address",
+      "text": "Accessory Dwelling Unit Address:",
+      "page": 1,
+      "box": [
+        43.4,
+        123.1,
+        525.0,
+        21.9
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-applicant-name",
+      "doc": "express",
+      "label": "Applicant name",
+      "text": "Applicant Name:",
+      "page": 1,
+      "box": [
+        43.4,
+        159.2,
+        241.1,
+        22.1
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-applicant-company",
+      "doc": "express",
+      "label": "Applicant company",
+      "text": "Company Name:",
+      "page": 1,
+      "box": [
+        284.8,
+        159.2,
+        283.6,
+        22.1
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-applicant-phone",
+      "doc": "express",
+      "label": "Applicant phone",
+      "text": "Phone No:",
+      "page": 1,
+      "box": [
+        43.4,
+        181.3,
+        187.1,
+        24.6
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-applicant-email",
+      "doc": "express",
+      "label": "Applicant e-mail",
+      "text": "E-mail Address:",
+      "page": 1,
+      "box": [
+        230.8,
+        181.3,
+        337.6,
+        24.6
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-applicant-mailing-address",
+      "doc": "express",
+      "label": "Applicant mailing address",
+      "text": "Mailing Address:",
+      "page": 1,
+      "box": [
+        43.4,
+        205.9,
+        332.9,
+        24.7
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-applicant-city",
+      "doc": "express",
+      "label": "Applicant city",
+      "text": "City:",
+      "page": 1,
+      "box": [
+        376.5,
+        205.9,
+        77.0,
+        24.7
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-applicant-zip",
+      "doc": "express",
+      "label": "Applicant zip code",
+      "text": "Zip Code:",
+      "page": 1,
+      "box": [
+        453.5,
+        205.9,
+        114.9,
+        24.7
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-applicant-signature",
+      "doc": "express",
+      "label": "Applicant signature",
+      "text": "I hereby certify, under penalty of perjury, that all of the foregoing information is true and correct and acknowledge that any false or misleading information shall be grounds for denial of this application. Furthermore, I agree to fully reimburse the City for the full cost of processing this application.",
+      "page": 1,
+      "box": [
+        43.4,
+        242,
+        525.0,
+        65.5
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-owner-name",
+      "doc": "express",
+      "label": "Property owner",
+      "text": "Property Owner:",
+      "page": 1,
+      "box": [
+        43.4,
+        324.8,
+        241.1,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-owner-company",
+      "doc": "express",
+      "label": "Owner company",
+      "text": "Company Name (if applicable):",
+      "page": 1,
+      "box": [
+        284.8,
+        324.8,
+        283.6,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-owner-phone",
+      "doc": "express",
+      "label": "Owner phone",
+      "text": "Phone No:",
+      "page": 1,
+      "box": [
+        43.4,
+        346.6,
+        187.1,
+        21.9
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-owner-email",
+      "doc": "express",
+      "label": "Owner e-mail",
+      "text": "E-mail Address:",
+      "page": 1,
+      "box": [
+        230.8,
+        346.6,
+        337.6,
+        21.9
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-owner-mailing-address",
+      "doc": "express",
+      "label": "Owner mailing address",
+      "text": "Mailing Address:",
+      "page": 1,
+      "box": [
+        43.4,
+        368.5,
+        332.9,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-owner-city",
+      "doc": "express",
+      "label": "Owner city",
+      "text": "City:",
+      "page": 1,
+      "box": [
+        376.5,
+        368.5,
+        77.0,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-owner-zip",
+      "doc": "express",
+      "label": "Owner zip code",
+      "text": "Zip Code:",
+      "page": 1,
+      "box": [
+        453.5,
+        368.5,
+        114.9,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-existing-sqft",
+      "doc": "express",
+      "label": "Existing home, square feet",
+      "text": "Total Square Footage of Existing Primary Dwelling:",
+      "page": 1,
+      "box": [
+        43.4,
+        390.3,
+        525.0,
+        21.9
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-existing-bedrooms",
+      "doc": "express",
+      "label": "Existing bedrooms",
+      "text": "Total Existing Bedrooms:",
+      "page": 1,
+      "box": [
+        43.4,
+        412.2,
+        251.7,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-existing-bathrooms",
+      "doc": "express",
+      "label": "Existing bathrooms",
+      "text": "Total Existing Bathrooms:",
+      "page": 1,
+      "box": [
+        295.4,
+        412.2,
+        273.0,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-floor-plan",
+      "doc": "express",
+      "label": "Floor plan selected",
+      "text": "Floor Plan Selected:",
+      "page": 1,
+      "box": [
+        43.4,
+        447.7,
+        241.1,
+        21.9
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-elevation-style",
+      "doc": "express",
+      "label": "Elevation style",
+      "text": "Elevation Style:",
+      "page": 1,
+      "box": [
+        284.8,
+        447.7,
+        283.6,
+        21.9
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-adu-sqft",
+      "doc": "express",
+      "label": "ADU square feet",
+      "text": "Total Square Footage:",
+      "page": 1,
+      "box": [
+        43.4,
+        469.6,
+        241.1,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-adu-bedrooms",
+      "doc": "express",
+      "label": "ADU bedrooms",
+      "text": "Number of Bedrooms:",
+      "page": 1,
+      "box": [
+        284.8,
+        469.6,
+        283.6,
+        21.8
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "express-owner-signature",
+      "doc": "express",
+      "label": "Owner signature",
+      "text": "I have read and understand the obligations regarding the filing and processing of the attached application. Further, the information submitted as part of this application, including statements and answers contained herein, are in all respects true and correct. I HEREBY CERTIFY that I am the legal property owner of record or his/her authorized representative and acknowledge and authorize the person(s) named above as applicant and agent to represent me and bind me in all matters concerning this Accessory Dwelling Unit Permit. I approve of the action requested.",
+      "page": 1,
+      "box": [
+        43.4,
+        502.8,
+        525.0,
+        96.3
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/49140/"
+    },
+    {
+      "id": "b802-adu-impact-fees",
+      "doc": "b802",
+      "label": "Impact fees for ADUs",
+      "text": "ACCESSORY DWELLING UNITS SEE NOTE BELOW VARIES* *PURSUANT TO GOVERNMENT CODE SECTION 66324, ADU’s ARE EXEMPT FROM INCURRING IMPACT FEES FROM LOCAL AGENCIES, SPECIAL DISTRICTS AND WATER CORPORATIONS IF SUCH UNIT IS LESS THAN 750 SQ FT. IF AN ADU IS 750 SQ FT OR LARGER, IMPACT FEES SHALL BE CHARGED PROPORTIONATELY IN RELATION TO THE SF OF THE ADU TO THE SF OF THE PRIMARY DWELLING UNIT.",
+      "page": 2,
+      "box": [
+        36,
+        279.1,
+        534.1,
+        63.4
+      ],
+      "source_url": "https://www.anaheim.net/DocumentCenter/View/39711/Developer-Impact-Fees---B802"
     }
   ],
   "steps": [
@@ -133,7 +547,98 @@
         "file-sewer-capacity-email",
         "file-new-address-request",
         "file-floor-plan"
-      ]
+      ],
+      "summary": "Your packet holds three made-up files, each listed with the type it was uploaded as."
+    },
+    {
+      "id": "read-checklist",
+      "title": "Read the city checklist",
+      "kind": "read",
+      "doc": "z412",
+      "targets": [
+        "z412-overview",
+        "adu-express-program"
+      ],
+      "summary": "Planning reviews ADUs during the Building Division's plan check, and new detached ADUs may be eligible for the ADU Express Program."
+    },
+    {
+      "id": "form-project",
+      "title": "Application: project information",
+      "kind": "form",
+      "doc": "express",
+      "targets": [
+        "express-project-address",
+        "express-adu-address"
+      ],
+      "summary": "The ADU Express Application starts with the project address and the accessory dwelling unit address."
+    },
+    {
+      "id": "form-applicant",
+      "title": "Application: applicant",
+      "kind": "form",
+      "doc": "express",
+      "targets": [
+        "express-applicant-name",
+        "express-applicant-company",
+        "express-applicant-phone",
+        "express-applicant-email",
+        "express-applicant-mailing-address",
+        "express-applicant-city",
+        "express-applicant-zip"
+      ],
+      "summary": "The applicant gives a name, company name, phone number, e-mail address and mailing address."
+    },
+    {
+      "id": "form-owner",
+      "title": "Application: property owner",
+      "kind": "form",
+      "doc": "express",
+      "targets": [
+        "express-owner-name",
+        "express-owner-company",
+        "express-owner-phone",
+        "express-owner-email",
+        "express-owner-mailing-address",
+        "express-owner-city",
+        "express-owner-zip"
+      ],
+      "summary": "The property owner gives a name, company name if applicable, phone number, e-mail address and mailing address."
+    },
+    {
+      "id": "form-existing-home",
+      "title": "Application: existing home",
+      "kind": "form",
+      "doc": "express",
+      "targets": [
+        "express-existing-sqft",
+        "express-existing-bedrooms",
+        "express-existing-bathrooms"
+      ],
+      "summary": "The form asks for the total square footage of the existing primary dwelling and its total bedrooms and bathrooms."
+    },
+    {
+      "id": "form-proposed-adu",
+      "title": "Application: proposed ADU",
+      "kind": "form",
+      "doc": "express",
+      "targets": [
+        "express-floor-plan",
+        "express-elevation-style",
+        "express-adu-sqft",
+        "express-adu-bedrooms"
+      ],
+      "summary": "The form asks for the floor plan selected, the elevation style, the total square footage and the number of bedrooms."
+    },
+    {
+      "id": "form-signatures",
+      "title": "Application: signatures",
+      "kind": "form",
+      "doc": "express",
+      "targets": [
+        "express-applicant-signature",
+        "express-owner-signature"
+      ],
+      "summary": "The applicant certifies under penalty of perjury and agrees to reimburse the City's processing cost; the owner certifies they are the owner of record or an authorized representative."
     },
     {
       "id": "gather-before-plan-check",
@@ -144,7 +649,8 @@
         "sewer-capacity-verification",
         "meter-spot-report",
         "new-address-request"
-      ]
+      ],
+      "summary": "Before building plan check, the checklist asks for sewer capacity verification, a meter spot report if a meter is added, upgraded or moved, and a new address request."
     },
     {
       "id": "check-the-law",
@@ -153,17 +659,39 @@
       "doc": "z412",
       "targets": [
         "jadu-owner-occupancy-covenant"
-      ]
+      ],
+      "summary": "For JADUs, the checklist requires a recorded owner occupancy covenant and cites Government Code Sections 65852.2 and 65852.22."
+    },
+    {
+      "id": "impact-fees",
+      "title": "Impact fees by size",
+      "kind": "law",
+      "doc": "b802",
+      "targets": [
+        "b802-adu-impact-fees"
+      ],
+      "summary": "The impact fee sheet says ADUs under 750 sq ft are exempt from impact fees, citing Government Code Section 66324."
     },
     {
       "id": "final-check",
-      "title": "Final check before you submit",
+      "title": "Final check: JADU-only items",
       "kind": "final",
       "doc": "z412",
       "targets": [
         "jadu-title-report",
         "jadu-grant-deed"
-      ]
+      ],
+      "summary": "The checklist asks for a title report and a grant deed for JADUs."
+    },
+    {
+      "id": "packet-check",
+      "title": "Final check: your packet",
+      "kind": "final",
+      "doc": "packet",
+      "targets": [
+        "packet-summary"
+      ],
+      "summary": "Your packet holds three made-up files."
     }
   ]
 }

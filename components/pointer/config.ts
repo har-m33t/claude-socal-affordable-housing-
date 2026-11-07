@@ -7,7 +7,7 @@ import typeAdu from "@/data/types/adu.json";
 import citiesFixture from "@/fixtures/mock-cities.json";
 import typesFixture from "@/fixtures/mock-types.json";
 import packetFixture from "@/fixtures/mock-packet.json";
-import eventsFixture from "@/fixtures/mock-events.json";
+import planRunFixture from "@/fixtures/plan-run.json";
 import planAnaheimAdu from "@/data/plans/anaheim-adu.json";
 import { checkPlan, type Plan } from "./plan";
 import {
@@ -63,9 +63,9 @@ export function getCityConfig(city: string): CityConfig | undefined {
 export const DEFAULT_CITY = "Anaheim";
 export const DEFAULT_TYPE = "adu";
 
-/** Mock events, validated. Malformed rows are dropped and counted so the UI can show it. */
+/** The scripted plan run (fixtures/plan-run.json), validated. Malformed rows are dropped and counted so the UI can show it. */
 export function loadMockEvents(): { events: AgentEvent[]; dropped: number } {
-  const raw = (eventsFixture as { events: unknown[] }).events;
+  const raw = (planRunFixture as { events: unknown[] }).events;
   const events: AgentEvent[] = [];
   let dropped = 0;
   for (const r of raw) {
