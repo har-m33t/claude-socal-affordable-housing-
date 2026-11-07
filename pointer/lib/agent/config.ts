@@ -13,8 +13,12 @@ import type { AgentCaps } from "./types";
 /** The model the loop runs on. No date suffix. */
 export const MODEL = "claude-opus-5-5";
 
-/** Streaming requests use the full window. */
-export const DEFAULT_MAX_TOKENS = 64_000;
+/**
+ * Output cap per streaming call. 32000, not the full window: Team 4's route
+ * checklist asserts 32000 or less, and a smaller cap means a truncated turn
+ * costs less. The step cap stays at 12.
+ */
+export const DEFAULT_MAX_TOKENS = 32_000;
 
 /** A run is capped at this many assistant turns. */
 export const DEFAULT_MAX_STEPS = 12;

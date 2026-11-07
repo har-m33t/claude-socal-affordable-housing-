@@ -29,6 +29,11 @@ import * as nodePath from "node:path";
 // cannot follow an expression specifier, so a Next build needs them static.
 import { TOOL_DEFINITIONS, validateToolInput } from "./tools";
 import { verifyEvent } from "./verifier";
+// Namespace import, not named: `resolveStatuteId` and `loadStatuteTable` are
+// landing in lane `agent-verifier` in parallel with this change. Reading them
+// off the namespace keeps this lane compiling before they exist, and picks up
+// the real functions the moment they land. Both paths FAIL CLOSED when absent.
+import * as verifierModule from "./verifier";
 import { createRecorder } from "./recorder";
 import { loadReplay } from "./replay";
 
@@ -41,6 +46,7 @@ import {
   REPLAY_PATH,
 } from "./config";
 import { buildSystemBlocks, buildUserContent } from "./prompt";
+import type { AgentDocument } from "./prompt";
 import type {
   AgentCaps,
   AgentEvent,
@@ -49,6 +55,7 @@ import type {
   ProjectTypePack,
   RecorderHandle,
   StatuteEntry,
+  StatuteResolution,
   StreamFrame,
   ValidationResult,
   VerifyResult,
@@ -68,6 +75,14 @@ export interface ToolsLike {
 /** lib/agent/verifier.ts (lane `agent-verifier`). */
 export interface VerifierLike {
   verifyEvent(event: AgentEvent, statutes: StatuteEntry[]): VerifyResult;
+  /**
+   * Resolves a model-supplied id against the table. Optional only while lane
+   * `agent-verifier` lands it; when it is missing, a call carrying a
+   * statute_id is DROPPED rather than emitted without its reference.
+   */
+  resolveStatuteId?: (id: string, statutes: StatuteEntry[]) => StatuteResolution;
+  /** Accepts a bare array or Team 1's {about, statutes:[...]} wrapper. */
+  loadStatuteTable?: (raw: unknown) => StatuteEntry[];
 }
 
 /** lib/agent/recorder.ts (lane `agent-verifier`). */
@@ -96,6 +111,18 @@ export interface HandbookAttachment {
   title: string;
 }
 
+/**
+ * What the route hands the loop.
+ *
+ * `documents` replaces the old manifest-only `packet`, per issue #3. The
+ * frozen AgentRunRequest in types.ts still declares `packet` and has no
+ * `documents` field, so this lane extends it locally rather than editing a
+ * lead-owned file; types.ts needs a follow-up to match.
+ */
+export interface AgentRunInput extends Omit<AgentRunRequest, "packet"> {
+  documents?: AgentDocument[];
+}
+
 export interface AgentRunDeps {
   tools?: ToolsLike;
   verifier?: VerifierLike;
@@ -122,7 +149,19 @@ export const MAX_PARSE_RETRIES = 2;
 // Resolved at module load now that every lane has landed. `deps` still wins,
 // so tests keep injecting stubs; these are only the defaults.
 const LANE_TOOLS: ToolsLike = { TOOL_DEFINITIONS, validateToolInput };
-const LANE_VERIFIER: VerifierLike = { verifyEvent };
+const LANE_EXTRAS = verifierModule as unknown as {
+  resolveStatuteId?: VerifierLike["resolveStatuteId"];
+  loadStatuteTable?: VerifierLike["loadStatuteTable"];
+};
+const LANE_VERIFIER: VerifierLike = {
+  verifyEvent,
+  ...(typeof LANE_EXTRAS.resolveStatuteId === "function"
+    ? { resolveStatuteId: LANE_EXTRAS.resolveStatuteId }
+    : {}),
+  ...(typeof LANE_EXTRAS.loadStatuteTable === "function"
+    ? { loadStatuteTable: LANE_EXTRAS.loadStatuteTable }
+    : {}),
+};
 const LANE_REPLAY: ReplayLoader = loadReplay;
 const LANE_RECORDER: RecorderFactory = createRecorder;
 
@@ -158,8 +197,24 @@ export async function loadPackFromDisk(
   return readJsonFile<ProjectTypePack>(nodePath.join(appRoot, "data", "types", `${slug}.json`));
 }
 
-export async function loadStatutesFromDisk(appRoot: string): Promise<StatuteEntry[]> {
-  return readJsonFile<StatuteEntry[]>(nodePath.join(appRoot, "data", "statutes.json"));
+/**
+ * Reads data/statutes.json and interprets it with the lane's loadStatuteTable,
+ * never a cast: Team 1's real file uses the {about, statutes:[...]} wrapper
+ * form and a cast would silently produce an empty or wrong table.
+ *
+ * When loadStatuteTable has not landed yet, a bare array is accepted as-is and
+ * anything else yields an EMPTY table, so every statute_id then fails to
+ * resolve rather than resolving against a half-read file.
+ */
+export async function loadStatutesFromDisk(
+  appRoot: string,
+  loadStatuteTable?: (raw: unknown) => StatuteEntry[],
+): Promise<StatuteEntry[]> {
+  const raw: unknown = JSON.parse(
+    await readFile(nodePath.join(appRoot, "data", "statutes.json"), "utf8"),
+  );
+  if (typeof loadStatuteTable === "function") return loadStatuteTable(raw);
+  return Array.isArray(raw) ? (raw as StatuteEntry[]) : [];
 }
 
 /** The handbook is optional. Absent is a status frame, never a fabrication. */
@@ -223,6 +278,65 @@ function cacheTools(defs: Anthropic.Tool[]): Anthropic.Tool[] {
   return copy;
 }
 
+
+/**
+ * Shape guard for an id the model named. An id is a LOOKUP KEY, never law, and
+ * the resolver fails closed on anything it does not know - but a key still has
+ * to look like a key before it is used as one.
+ */
+const STATUTE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+/**
+ * Pull the statute_id the model passed out of one validated tool call.
+ *
+ * ASSUMPTION, to be reconciled with lane `agent-tools`: that lane validates
+ * statute_id's SHAPE and has not yet published where it surfaces the parsed
+ * value. This reads, in order, an extra `statute_id` on the success result, a
+ * `statute_id` on a parsed `input` the result may carry, one left on the event
+ * itself, and finally the raw tool input - each behind the shape guard above.
+ * Whichever lands, the value is only ever used as a table key: the statute_ref
+ * on the event is copied from the resolver's answer, never from here.
+ */
+function readStatuteId(validated: { event: AgentEvent }, rawInput: unknown): string | null {
+  const candidates: unknown[] = [
+    (validated as { statute_id?: unknown }).statute_id,
+    (validated as { input?: { statute_id?: unknown } }).input?.statute_id,
+    (validated.event as { statute_id?: unknown }).statute_id,
+    typeof rawInput === "object" && rawInput !== null
+      ? (rawInput as { statute_id?: unknown }).statute_id
+      : undefined,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const trimmed = candidate.trim();
+    if (trimmed === "") continue;
+    // Not a valid key: hand it to the resolver's refusal path rather than
+    // silently ignoring it, by returning it for the caller to reject.
+    return STATUTE_ID.test(trimmed) ? trimmed : trimmed.slice(0, 120);
+  }
+  return null;
+}
+
+/**
+ * Project a validated event onto the contract's fields and nothing else.
+ *
+ * An allowlist, not a blocklist: whatever a permissive validator copies off
+ * the model's input - a `statute_ref`, a legacy `citation`, a `source_url`, a
+ * field nobody has thought of yet - does not survive. event.schema.json sets
+ * additionalProperties:false, so an off-contract key reaching the UI is a bug
+ * either way, and `statute_ref` is server-rendered by definition.
+ *
+ * Keys are copied only when present, so "absent" and "null" stay distinct for
+ * item_id, which add_note may legitimately omit.
+ */
+function onlyContractFields(event: AgentEvent): AgentEvent {
+  const clean: AgentEvent = { tool: event.tool, ts: event.ts };
+  if ("item_id" in event) clean.item_id = event.item_id;
+  if (event.status !== undefined) clean.status = event.status;
+  if (event.text !== undefined) clean.text = event.text;
+  return clean;
+}
+
 // ------------------------------------------------------------------- the run
 
 /**
@@ -232,7 +346,7 @@ function cacheTools(defs: Anthropic.Tool[]): Anthropic.Tool[] {
  * frames the live run produced, in order.
  */
 export async function* runAgent(
-  request: AgentRunRequest,
+  request: AgentRunInput,
   deps: AgentRunDeps = {},
 ): AsyncGenerator<StreamFrame, void, void> {
   let recorder: RecorderHandle | null = null;
@@ -257,7 +371,7 @@ export async function* runAgent(
 }
 
 async function* runCore(
-  request: AgentRunRequest,
+  request: AgentRunInput,
   deps: AgentRunDeps,
 ): AsyncGenerator<StreamFrame, void, void> {
   const appRoot = deps.appRoot ?? process.cwd();
@@ -351,7 +465,8 @@ async function* runCore(
 
   let statutes: StatuteEntry[];
   try {
-    statutes = await (deps.loadStatutes ?? (() => loadStatutesFromDisk(appRoot)))();
+    statutes = await (deps.loadStatutes ??
+      (() => loadStatutesFromDisk(appRoot, verifier.loadStatuteTable)))();
   } catch {
     statutes = [];
     yield status("step", "The statute map could not be read, so no statute may be cited.");
@@ -378,7 +493,7 @@ async function* runCore(
       role: "user",
       content: buildUserContent({
         question: request.question,
-        packet: request.packet,
+        documents: request.documents,
         handbookBase64: handbook?.base64,
         handbookTitle: handbook?.title,
         now: now(),
@@ -492,14 +607,63 @@ async function* runCore(
           });
           continue; // no frame at all: the UI must not see a rejected call
         }
-        const verified = verifier.verifyEvent(validated.event, statutes);
+
+        // Nothing off-contract survives from the model's own input.
+        let candidate = onlyContractFields(validated.event);
+
+        // --- the server renders the law, the model only names it.
+        const statuteId = readStatuteId(validated, use.input);
+        if (statuteId !== null) {
+          if (typeof verifier.resolveStatuteId !== "function") {
+            // Fail closed. Emitting the action without its reference would
+            // silently drop the law the model was pointing at.
+            const reason = "statute resolution is unavailable in this build";
+            yield { type: "dropped", reason, event: candidate };
+            results.push({
+              type: "tool_result",
+              tool_use_id: use.id,
+              is_error: true,
+              content: reason,
+            });
+            continue;
+          }
+          const resolved = verifier.resolveStatuteId(statuteId, statutes);
+          if (!resolved.ok) {
+            yield { type: "dropped", reason: resolved.reason, event: candidate };
+            results.push({
+              type: "tool_result",
+              tool_use_id: use.id,
+              is_error: true,
+              // The reason names what is wrong with the id so the model can
+              // correct it or fall back to "unknown".
+              content: `statute_id did not resolve: ${resolved.reason}`,
+            });
+            continue;
+          }
+          // Copied field by field from the resolver's answer. Not spread from
+          // the model's input, and not merged with it.
+          candidate = {
+            ...candidate,
+            statute_ref: {
+              id: resolved.statute.id,
+              old: resolved.statute.old,
+              new_range: resolved.statute.new_range,
+              title: resolved.statute.title,
+              source_url: resolved.statute.source_url,
+              checked_date: resolved.statute.checked_date,
+            },
+          };
+        }
+
+        // --- the backstop: prose asserting law is dropped, reference or not.
+        const verified = verifier.verifyEvent(candidate, statutes);
         if (!verified.ok) {
-          yield { type: "dropped", reason: verified.reason, event: validated.event };
+          yield { type: "dropped", reason: verified.reason, event: candidate };
           results.push({
             type: "tool_result",
             tool_use_id: use.id,
             is_error: true,
-            content: `Dropped by the citation check: ${verified.reason}`,
+            content: `Dropped by the law check: ${verified.reason}`,
           });
           continue;
         }

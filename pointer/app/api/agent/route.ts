@@ -26,37 +26,36 @@ import { hasApiKey, recordingEnabled } from "../../../lib/agent/config";
 import { runAgent } from "../../../lib/agent/loop";
 import { clientKey, requestRateLimiter } from "../../../lib/agent/ratelimit";
 import { sseResponse } from "../../../lib/agent/sse";
-import type { AgentRunRequest } from "../../../lib/agent/types";
+import type { AgentRunInput } from "../../../lib/agent/loop";
 
 // SSE must never be statically optimized, prerendered or cached.
 export const dynamic = "force-dynamic";
 // The loop reads data/ and fixtures/ from disk.
 export const runtime = "nodejs";
 
-const PacketFileSchema = z.strictObject({
+/**
+ * One attached document. `text` is already redacted in the browser by Team 4's
+ * lib/redact before it is sent; this lane treats it as untrusted regardless,
+ * and it only ever reaches the model inside the untrusted envelope in a user
+ * turn, with `<` escaped.
+ */
+const DocumentSchema = z.strictObject({
   name: z.string().min(1).max(260),
   declared_type: z.string().min(1).max(120),
-  pages: z.number().int().positive().max(10_000).optional(),
-});
-
-/**
- * `synthetic: true` is required by contract: the only applicant this prototype
- * accepts is a made-up one.
- */
-const PacketSchema = z.strictObject({
-  applicant: z.string().min(1).max(400),
-  synthetic: z.literal(true),
-  scenario: z.string().max(2_000).optional(),
-  files: z.array(PacketFileSchema).max(50),
+  text: z.string().max(200_000),
 });
 
 const BodySchema = z.strictObject({
   city: z.string().min(1).max(120),
+  // `projectType`, not `type`: `type` collides with the StreamFrame
+  // discriminator and would be ambiguous on the wire.
   projectType: z.string().min(1).max(120),
   question: z.string().min(1).max(4_000),
-  packet: PacketSchema.optional(),
+  documents: z.array(DocumentSchema).max(20).optional(),
   replay: z.boolean().optional(),
   // No `record` field. See the header comment: it is server-side only.
+  // No `packet` field either: superseded by `documents` (issue #3). Both it
+  // and `type` are now rejected as unknown keys rather than ignored.
 });
 
 /** zod issues are reduced to path + message so no submitted value is echoed. */
@@ -136,7 +135,7 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  const body: AgentRunRequest = {
+  const body: AgentRunInput = {
     ...parsed.data,
     // Server-side only. A caller cannot ask for this.
     record: recordingEnabled(),
