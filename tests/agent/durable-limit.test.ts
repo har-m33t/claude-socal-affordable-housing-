@@ -1,20 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { checkDurableLimit, durableBackend } from "../../lib/agent/durable-limit";
+import {
+  ASSUMED_INSTANCES,
+  checkDurableLimit,
+  degradedCaps,
+  durableBackend,
+} from "../../lib/agent/durable-limit";
 
 const OPTS = { max: 5, globalMax: 20, windowMs: 60_000 };
 const BACKEND = { url: "https://example-redis.upstash.io", token: "token-for-tests" };
 
-/** A fake Upstash pipeline reply: [INCR g, PEXPIRE, INCR c, PEXPIRE, PTTL g, PTTL c]. */
-function reply(globalCount: number, clientCount: number, ttl = 30_000) {
-  return [
-    { result: globalCount },
-    { result: 1 },
-    { result: clientCount },
-    { result: 1 },
-    { result: ttl },
-    { result: ttl },
-  ];
+/** The Lua script's reply: {allowed, which, globalCount, clientCount, ttl}. */
+function allow(globalCount: number, clientCount: number, ttl = 30_000) {
+  return { result: [1, "ok", globalCount, clientCount, ttl] };
+}
+function refuse(which: "global" | "client", globalCount: number, clientCount: number, ttl = 30_000) {
+  return { result: [0, which, globalCount, clientCount, ttl] };
 }
 
 function fetchReturning(body: unknown, ok = true, status = 200): typeof fetch {
@@ -80,7 +81,7 @@ describe("checkDurableLimit - decisions", () => {
   it("allows a run under both caps and reports the client remainder", async () => {
     const d = await checkDurableLimit("ip:a", OPTS, {
       backend: BACKEND,
-      fetchImpl: fetchReturning(reply(3, 2)),
+      fetchImpl: fetchReturning(allow(3, 2)),
     });
     expect(d).toEqual({ ok: true, scope: "client", remaining: 3, retryAfterMs: 0 });
   });
@@ -90,7 +91,7 @@ describe("checkDurableLimit - decisions", () => {
     // or many clients together, must still hit a real spend ceiling.
     const d = await checkDurableLimit("ip:a", OPTS, {
       backend: BACKEND,
-      fetchImpl: fetchReturning(reply(21, 1, 12_000)),
+      fetchImpl: fetchReturning(refuse("global", 20, 1, 12_000)),
     });
     expect(d).toEqual({ ok: false, scope: "global", remaining: 0, retryAfterMs: 12_000 });
   });
@@ -98,7 +99,7 @@ describe("checkDurableLimit - decisions", () => {
   it("refuses a single noisy client at its own cap", async () => {
     const d = await checkDurableLimit("ip:a", OPTS, {
       backend: BACKEND,
-      fetchImpl: fetchReturning(reply(6, 6, 9_000)),
+      fetchImpl: fetchReturning(refuse("client", 6, 5, 9_000)),
     });
     expect(d).toEqual({ ok: false, scope: "client", remaining: 0, retryAfterMs: 9_000 });
   });
@@ -106,7 +107,7 @@ describe("checkDurableLimit - decisions", () => {
   it("checks global BEFORE client, so the ceiling is named when both are exceeded", async () => {
     const d = await checkDurableLimit("ip:a", OPTS, {
       backend: BACKEND,
-      fetchImpl: fetchReturning(reply(99, 99)),
+      fetchImpl: fetchReturning(refuse("global", 99, 99)),
     });
     expect(d?.scope).toBe("global");
   });
@@ -114,12 +115,12 @@ describe("checkDurableLimit - decisions", () => {
   it("allows exactly at the cap and refuses one past it", async () => {
     const at = await checkDurableLimit("ip:a", OPTS, {
       backend: BACKEND,
-      fetchImpl: fetchReturning(reply(20, 5)),
+      fetchImpl: fetchReturning(allow(20, 5)),
     });
     expect(at?.ok).toBe(true);
     const past = await checkDurableLimit("ip:a", OPTS, {
       backend: BACKEND,
-      fetchImpl: fetchReturning(reply(21, 5)),
+      fetchImpl: fetchReturning(refuse("global", 20, 5)),
     });
     expect(past?.ok).toBe(false);
   });
@@ -139,9 +140,9 @@ describe("checkDurableLimit - failure policy", () => {
     ).toBeNull();
   });
 
-  it("returns null when the body is not an array", async () => {
+  it("returns null when the result is not an array", async () => {
     expect(
-      await checkDurableLimit("ip:a", OPTS, { backend: BACKEND, fetchImpl: fetchReturning({ oops: 1 }) }),
+      await checkDurableLimit("ip:a", OPTS, { backend: BACKEND, fetchImpl: fetchReturning({ result: "nope" }) }),
     ).toBeNull();
   });
 
@@ -149,24 +150,26 @@ describe("checkDurableLimit - failure policy", () => {
     expect(
       await checkDurableLimit("ip:a", OPTS, {
         backend: BACKEND,
-        fetchImpl: fetchReturning([{ result: 1 }]),
+        fetchImpl: fetchReturning({ result: [1, "ok"] }),
       }),
     ).toBeNull();
   });
 
-  it("returns null when Redis reports an error for any command", async () => {
-    const bad = reply(1, 1);
-    bad[2] = { error: "WRONGTYPE" } as never;
+  it("returns null when Redis reports a script error", async () => {
     expect(
-      await checkDurableLimit("ip:a", OPTS, { backend: BACKEND, fetchImpl: fetchReturning(bad) }),
+      await checkDurableLimit("ip:a", OPTS, {
+        backend: BACKEND,
+        fetchImpl: fetchReturning({ error: "ERR unknown command" }),
+      }),
     ).toBeNull();
   });
 
   it("returns null when a counter is not a number", async () => {
-    const bad = reply(1, 1);
-    bad[0] = { result: "nope" } as never;
     expect(
-      await checkDurableLimit("ip:a", OPTS, { backend: BACKEND, fetchImpl: fetchReturning(bad) }),
+      await checkDurableLimit("ip:a", OPTS, {
+        backend: BACKEND,
+        fetchImpl: fetchReturning({ result: [1, "ok", "nope", 1, 1] }),
+      }),
     ).toBeNull();
   });
 
@@ -181,7 +184,7 @@ describe("checkDurableLimit - failure policy", () => {
     let sawSignal = false;
     const spy = vi.fn(async (_u: unknown, init: RequestInit) => {
       sawSignal = init.signal instanceof AbortSignal;
-      return { ok: true, status: 200, json: async () => reply(1, 1) };
+      return { ok: true, status: 200, json: async () => allow(1, 1) };
     }) as unknown as typeof fetch;
     await checkDurableLimit("ip:a", OPTS, { backend: BACKEND, fetchImpl: spy });
     expect(sawSignal).toBe(true);
@@ -189,44 +192,45 @@ describe("checkDurableLimit - failure policy", () => {
 });
 
 describe("checkDurableLimit - the request it makes", () => {
-  it("sends one atomic pipeline, bearer-authenticated, to /pipeline", async () => {
+  it("sends ONE atomic EVAL, bearer-authenticated, with both keys", async () => {
     let url = "";
     let init: RequestInit = {};
     const spy = vi.fn(async (u: unknown, i: RequestInit) => {
       url = String(u);
       init = i;
-      return { ok: true, status: 200, json: async () => reply(1, 1) };
+      return { ok: true, status: 200, json: async () => allow(1, 1) };
     }) as unknown as typeof fetch;
 
     await checkDurableLimit("ip:1.2.3.4", OPTS, { backend: BACKEND, fetchImpl: spy });
 
-    expect(url).toBe("https://example-redis.upstash.io/pipeline");
+    expect(url).toBe("https://example-redis.upstash.io");
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer token-for-tests");
 
-    const sent = JSON.parse(String(init.body)) as string[][];
-    expect(sent.map((c) => c[0])).toEqual(["INCR", "PEXPIRE", "INCR", "PEXPIRE", "PTTL", "PTTL"]);
-    // INCR is what makes this atomic across instances; PEXPIRE NX stops the
-    // window sliding forward on every request.
-    expect(sent[1]?.[3]).toBe("NX");
-    expect(sent[3]?.[3]).toBe("NX");
+    const sent = JSON.parse(String(init.body)) as string[];
+    expect(sent[0]).toBe("EVAL");
+    expect(sent[2]).toBe("2");
+    // The script must CHECK before it increments: a refused request that still
+    // increments would let a flood of refusals lock out everyone for the window.
+    expect(sent[1]).toContain("if gc >= gmax then");
+    expect(sent[1]).toContain("if cc >= cmax then");
+    const incrAt = sent[1]!.indexOf("INCR");
+    expect(sent[1]!.indexOf("if gc >= gmax then")).toBeLessThan(incrAt);
   });
 
   it("namespaces keys and separates global from per-client", async () => {
     let body = "";
     const spy = vi.fn(async (_u: unknown, i: RequestInit) => {
       body = String(i.body);
-      return { ok: true, status: 200, json: async () => reply(1, 1) };
+      return { ok: true, status: 200, json: async () => allow(1, 1) };
     }) as unknown as typeof fetch;
 
     await checkDurableLimit("ip:1.2.3.4", OPTS, { backend: BACKEND, fetchImpl: spy });
 
-    const cmds = JSON.parse(body) as string[][];
-    const globalKey = cmds[0]?.[1] ?? "";
-    const clientKey = cmds[2]?.[1] ?? "";
-    expect(globalKey).toContain("pointer:agent:rl:global:");
-    expect(clientKey).toContain("pointer:agent:rl:client:ip:1.2.3.4:");
-    expect(globalKey).not.toBe(clientKey);
+    const sent = JSON.parse(body) as string[];
+    expect(sent[3]).toContain("pointer:agent:rl:global:");
+    expect(sent[4]).toContain("pointer:agent:rl:client:ip:1.2.3.4:");
+    expect(sent[3]).not.toBe(sent[4]);
   });
 
   it("puts different clients in different keys but the same global key", async () => {
@@ -234,15 +238,34 @@ describe("checkDurableLimit - the request it makes", () => {
       let body = "";
       const spy = vi.fn(async (_u: unknown, i: RequestInit) => {
         body = String(i.body);
-        return { ok: true, status: 200, json: async () => reply(1, 1) };
+        return { ok: true, status: 200, json: async () => allow(1, 1) };
       }) as unknown as typeof fetch;
       await checkDurableLimit(who, OPTS, { backend: BACKEND, fetchImpl: spy });
-      const cmds = JSON.parse(body) as string[][];
-      return { global: cmds[0]?.[1], client: cmds[2]?.[1] };
+      const sent = JSON.parse(body) as string[];
+      return { global: sent[3], client: sent[4] };
     };
     const a = await keysFor("ip:a");
     const b = await keysFor("ip:b");
     expect(a.client).not.toBe(b.client);
     expect(a.global).toBe(b.global);
+  });
+});
+
+describe("degradedCaps - a broken backend must not RAISE the ceiling", () => {
+  it("is much tighter than the configured global cap", () => {
+    const d = degradedCaps(OPTS);
+    expect(d.globalMax).toBe(Math.floor(OPTS.globalMax / ASSUMED_INSTANCES));
+    expect(d.globalMax).toBeLessThan(OPTS.globalMax);
+  });
+
+  it("never drops below 1, so the app still serves", () => {
+    const d = degradedCaps({ max: 5, globalMax: 2, windowMs: 1000 });
+    expect(d.globalMax).toBeGreaterThanOrEqual(1);
+    expect(d.max).toBeGreaterThanOrEqual(1);
+  });
+
+  it("never exceeds the per-client cap", () => {
+    const d = degradedCaps({ max: 2, globalMax: 1000, windowMs: 1000 });
+    expect(d.max).toBeLessThanOrEqual(2);
   });
 });

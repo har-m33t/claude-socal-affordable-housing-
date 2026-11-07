@@ -16,14 +16,6 @@
  * Both are injected automatically when the store is attached to the project.
  * When neither pair is present this module reports "not configured" and the
  * caller keeps using the in-process limiter.
- *
- * FAILURE POLICY: on any Redis error, timeout or malformed reply, this returns
- * `null` rather than a decision, and the caller falls back to the in-process
- * limiter. That is deliberate. Failing closed would turn one Redis hiccup into
- * a dead demo; failing fully open would remove the ceiling exactly when the
- * backend is unhealthy. Falling back preserves the per-instance cap - the
- * behaviour we had before this file existed - and the caller reports which
- * limiter actually decided.
  */
 import type { RateLimitDecision } from "./ratelimit";
 
@@ -47,6 +39,38 @@ export interface DurableLimitOptions {
 const PREFIX = "pointer:agent:rl";
 const DEFAULT_TIMEOUT_MS = 1500;
 
+/**
+ * Check-then-increment, atomically, in one round trip.
+ *
+ * An earlier version pipelined unconditional INCRs, which was wrong: a caller
+ * already over the limit kept pushing the counters up, so the window never
+ * drained and a flood of ALREADY-REFUSED requests locked out legitimate users
+ * for the whole window. A refused request must not consume the budget it was
+ * refused by.
+ *
+ * Lua runs atomically inside Redis, so the read and the increment cannot
+ * interleave with another instance. Comparisons are `>=` against the value
+ * BEFORE incrementing, which matches the in-process limiter's boundary.
+ */
+const LIMIT_SCRIPT = `
+local gc = tonumber(redis.call('GET', KEYS[1]) or '0')
+local cc = tonumber(redis.call('GET', KEYS[2]) or '0')
+local gmax = tonumber(ARGV[1])
+local cmax = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
+if gc >= gmax then
+  return {0, 'global', gc, cc, redis.call('PTTL', KEYS[1])}
+end
+if cc >= cmax then
+  return {0, 'client', gc, cc, redis.call('PTTL', KEYS[2])}
+end
+gc = redis.call('INCR', KEYS[1])
+if gc == 1 then redis.call('PEXPIRE', KEYS[1], ttl) end
+cc = redis.call('INCR', KEYS[2])
+if cc == 1 then redis.call('PEXPIRE', KEYS[2], ttl) end
+return {1, 'ok', gc, cc, ttl}
+`;
+
 function readEnv(name: string): string | null {
   const raw = process.env[name];
   if (typeof raw !== "string") return null;
@@ -63,8 +87,8 @@ export function durableBackend(): DurableLimitBackend | null {
   const url = readEnv("KV_REST_API_URL") ?? readEnv("UPSTASH_REDIS_REST_URL");
   const token = readEnv("KV_REST_API_TOKEN") ?? readEnv("UPSTASH_REDIS_REST_TOKEN");
   if (url === null || token === null) return null;
-  // A misconfigured URL must not become an SSRF vector: only https, no
-  // credentials in the URL, and it must parse.
+  // A misconfigured URL must not become an SSRF vector: https only, no
+  // credentials embedded in the URL, and it must parse.
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:") return null;
@@ -75,26 +99,17 @@ export function durableBackend(): DurableLimitBackend | null {
   return { url: url.replace(/\/+$/, ""), token };
 }
 
-interface PipelineReply {
-  result?: unknown;
-  error?: unknown;
-}
-
-function asCount(reply: PipelineReply | undefined): number | null {
-  const v = reply?.result;
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
+function asNum(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
+  return null;
 }
 
 /**
- * One fixed window, two counters, one round trip.
- *
- * INCR is atomic, so concurrent instances cannot both read a stale value. PEXPIRE
- * with NX sets the lifetime only on the first increment of a window, so the
- * window does not slide forward on every request. PTTL comes back in the same
- * pipeline, giving an accurate retry hint without a second call.
- *
- * Returns null when the backend is unreachable or answers in a shape we do not
- * recognise, which the caller treats as "fall back", never as "allow".
+ * Returns a decision, or null when the backend is absent, unreachable, or
+ * answers in a shape we do not recognise. null means "I could not decide" and
+ * is never treated by the caller as "allow" - see `durableHealth` for what the
+ * caller does with a configured-but-unhealthy backend.
  */
 export async function checkDurableLimit(
   key: string,
@@ -114,55 +129,56 @@ export async function checkDurableLimit(
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-  let replies: PipelineReply[];
+  let out: unknown;
   try {
-    const res = await doFetch(`${backend.url}/pipeline`, {
+    const res = await doFetch(backend.url, {
       method: "POST",
       headers: {
         authorization: `Bearer ${backend.token}`,
         "content-type": "application/json",
       },
       body: JSON.stringify([
-        ["INCR", globalKey],
-        ["PEXPIRE", globalKey, String(ttl), "NX"],
-        ["INCR", clientKey],
-        ["PEXPIRE", clientKey, String(ttl), "NX"],
-        ["PTTL", globalKey],
-        ["PTTL", clientKey],
+        "EVAL",
+        LIMIT_SCRIPT,
+        "2",
+        globalKey,
+        clientKey,
+        String(options.globalMax),
+        String(options.max),
+        String(ttl),
       ]),
       signal: controller.signal,
       cache: "no-store",
     });
     if (!res.ok) return null;
     const body: unknown = await res.json();
-    if (!Array.isArray(body) || body.length < 6) return null;
-    replies = body as PipelineReply[];
+    if (body === null || typeof body !== "object") return null;
+    const rec = body as Record<string, unknown>;
+    if ("error" in rec && rec.error) return null;
+    out = rec.result;
   } catch {
     return null;
   } finally {
     clearTimeout(timer);
   }
 
-  if (replies.some((r) => r !== null && typeof r === "object" && "error" in r && r.error)) {
+  if (!Array.isArray(out) || out.length < 5) return null;
+  const allowed = asNum(out[0]);
+  const which = typeof out[1] === "string" ? out[1] : null;
+  const globalCount = asNum(out[2]);
+  const clientCount = asNum(out[3]);
+  const ttlLeft = asNum(out[4]);
+  if (allowed === null || which === null || globalCount === null || clientCount === null) {
     return null;
   }
 
-  const globalCount = asCount(replies[0]);
-  const clientCount = asCount(replies[2]);
-  if (globalCount === null || clientCount === null) return null;
-
-  const globalTtl = asCount(replies[4]);
-  const clientTtl = asCount(replies[5]);
-  const resetGlobal = globalTtl !== null && globalTtl > 0 ? globalTtl : ttl;
-  const resetClient = clientTtl !== null && clientTtl > 0 ? clientTtl : ttl;
-
-  // Global is checked FIRST: it is the spend ceiling, and a caller rotating
-  // its client key must still hit it.
-  if (globalCount > options.globalMax) {
-    return { ok: false, scope: "global", remaining: 0, retryAfterMs: resetGlobal };
-  }
-  if (clientCount > options.max) {
-    return { ok: false, scope: "client", remaining: 0, retryAfterMs: resetClient };
+  if (allowed === 0) {
+    return {
+      ok: false,
+      scope: which === "global" ? "global" : "client",
+      remaining: 0,
+      retryAfterMs: ttlLeft !== null && ttlLeft > 0 ? ttlLeft : ttl,
+    };
   }
   return {
     ok: true,
@@ -170,4 +186,25 @@ export async function checkDurableLimit(
     remaining: Math.max(0, options.max - clientCount),
     retryAfterMs: 0,
   };
+}
+
+/**
+ * How the caller should behave when the durable backend is CONFIGURED but did
+ * not answer.
+ *
+ * The naive fallback - just use the in-process limiter - is an escalation path:
+ * flood the app, exhaust the Redis quota, and the ceiling silently reverts to
+ * per-instance, which is what the durable limiter existed to fix. Failing
+ * closed instead would turn one transient blip into a dead demo.
+ *
+ * So a configured-but-unhealthy backend falls back to a DELIBERATELY TIGHTER
+ * in-process budget: the global cap divided across an assumed instance count,
+ * floored at 1. The app keeps serving, but an attacker who can break Redis
+ * gains a much smaller ceiling than before rather than a larger one.
+ */
+export const ASSUMED_INSTANCES = 8;
+
+export function degradedCaps(options: DurableLimitOptions): { max: number; globalMax: number } {
+  const perInstance = Math.max(1, Math.floor(options.globalMax / ASSUMED_INSTANCES));
+  return { max: Math.max(1, Math.min(options.max, perInstance)), globalMax: perInstance };
 }
