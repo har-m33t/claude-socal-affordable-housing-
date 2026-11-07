@@ -17,61 +17,62 @@
  * object (e.g. a draft_field call with item_id but no text) instead of
  * throwing. Never act on a tool input that has not been through
  * validateToolInput().
+ *
+ * LAW. The model cannot write law and cannot supply a citation. To refer to a
+ * statute it passes `statute_id`, naming a row in the verified statute table;
+ * the server resolves that id and renders the authoritative `statute_ref` onto
+ * the event. `statute_ref` is therefore never part of any tool input schema,
+ * and neither is anything citation-shaped.
+ *
+ * STRICT MODE. Every property declared on a schema also appears in that
+ * schema's `required` array, and a field the model is allowed to leave unset is
+ * typed as a nullable union (`["string", "null"]`) rather than omitted from
+ * `required`. See the note on OPTIONALITY below.
  */
 import type Anthropic from "@anthropic-ai/sdk";
 
 export { validateToolInput } from "./validate";
 
 /**
- * Appended verbatim to every tool description. Two rules the model has to be
- * told plainly on every single tool, because it only reads the one it picked.
+ * OPTIONALITY. Anthropic's strict mode requires `additionalProperties: false`
+ * and a `required` array. It is not settled here whether it also demands that
+ * every declared property appear in `required` (the way OpenAI's structured
+ * outputs do). Listing every property in `required` and expressing "may be
+ * unset" as `["string", "null"]` is valid under both readings, so that is the
+ * approach taken on all five tools. The cost is that the model must write an
+ * explicit `null`, which is cheap and makes the decision deliberate;
+ * validateToolInput() treats `null` in these fields as "not supplied".
+ */
+const NULLABLE_STRING = ["string", "null"];
+
+/**
+ * Appended verbatim to every tool description. The model only reads the
+ * description of the tool it picked, so both rules have to be on all five.
  */
 const HOUSE_RULES =
   "RULES. (1) `item_id` must be the id of an item that exists in the checklist of " +
   "the city configuration loaded for this run. Ids are not guessable and are not " +
   "shared between cities: use one copied exactly from the loaded checklist. A call " +
   "whose `item_id` is not in that checklist is rejected and the action is dropped. " +
-  "(2) Never invent or reconstruct a statute number, code section, fee amount, " +
-  "deadline or date, and never round, update or \"correct\" one. State only what the " +
-  "loaded city sources actually say. If they do not say, the answer is \"unknown\" - " +
-  "say so in plain words, or record it with mark_item and status \"unknown\". " +
-  "An unknown is always acceptable; a guess that reads like law is not.";
+  "(2) Never invent, reconstruct, round or \"correct\" a fee, deadline, date or " +
+  "measurement. State only what the loaded city sources actually say. If they do " +
+  "not say, the answer is \"unknown\" - say so in plain words, or record it with " +
+  "mark_item and status \"unknown\". An unknown is always acceptable; a guess that " +
+  "reads like law is not.";
 
 /**
- * The optional citation every tool may carry. Shared object, but each tool
- * definition references it from its own fixed position, so the serialized
- * prefix stays byte-stable.
+ * Appended to the three tools that can carry legal meaning. This is the single
+ * most load-bearing sentence in the product: it is what keeps a hallucinated
+ * code section off an applicant's screen.
  */
-const CITATION_PROPERTY = {
-  type: "object",
-  description:
-    "Where this came from. Attach it whenever the action repeats or relies on " +
-    "something a city source says. Use only a URL from the loaded city " +
-    "configuration's sources or from the checklist item itself - never a URL from " +
-    "memory.",
-  additionalProperties: false,
-  required: ["source_url", "checked_date"],
-  properties: {
-    source_url: {
-      type: "string",
-      description:
-        "The source URL, copied exactly from the loaded city configuration.",
-    },
-    checked_date: {
-      type: "string",
-      description:
-        "The date that source was last checked by a person, as YYYY-MM-DD, " +
-        "copied from the loaded city configuration. Do not use today's date and " +
-        "do not estimate it.",
-    },
-    detail: {
-      type: "string",
-      description:
-        "Optional pin-point inside the source: a section number, page number or " +
-        "a short quoted line. Quote it; do not paraphrase it. Max 500 characters.",
-    },
-  },
-};
+const LAW_RULE =
+  "LAW. Never write a statute number, section number, code citation, numeric " +
+  "range, bill number or URL into `text`. Not even one you are sure of, and not " +
+  "in parentheses or as an aside. To refer to law, set `statute_id` to the id of " +
+  "a row in the statute table you were given, and write `text` as plain prose " +
+  "with no numbers in it; the app looks that id up and renders the real citation " +
+  "itself. If no row covers the point, or you do not know the id, say the answer " +
+  "is unknown and set `statute_id` to null. Text containing law is dropped.";
 
 const ITEM_ID_PROPERTY = {
   type: "string",
@@ -79,6 +80,16 @@ const ITEM_ID_PROPERTY = {
     "The id of a checklist item in the loaded city configuration, copied " +
     "exactly (for example \"owner-affidavit\"). Must already exist in that " +
     "checklist; never invent one.",
+};
+
+const STATUTE_ID_PROPERTY = {
+  type: NULLABLE_STRING,
+  description:
+    "The id of a row in the statute table you were given, copied exactly, when " +
+    "this action rests on that law. Null when it does not, or when you do not " +
+    "know the id. This is a lookup key and nothing else: never put a statute " +
+    "number, section, range or URL here, and never guess an id - an id that is " +
+    "not in the table is rejected and the whole action is dropped.",
 };
 
 export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
@@ -98,7 +109,6 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
       required: ["item_id"],
       properties: {
         item_id: ITEM_ID_PROPERTY,
-        citation: CITATION_PROPERTY,
       },
     },
   },
@@ -117,7 +127,6 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
       required: ["item_id"],
       properties: {
         item_id: ITEM_ID_PROPERTY,
-        citation: CITATION_PROPERTY,
       },
     },
   },
@@ -129,13 +138,15 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
       "and \"unknown\" when you cannot tell from what you were given. Prefer " +
       "\"unknown\" over a guess - a wrong \"complete\" sends someone to the counter " +
       "with an incomplete application. " +
+      LAW_RULE +
+      " " +
       HOUSE_RULES,
     strict: true,
     eager_input_streaming: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
-      required: ["item_id", "status"],
+      required: ["item_id", "status", "statute_id"],
       properties: {
         item_id: ITEM_ID_PROPERTY,
         status: {
@@ -145,7 +156,7 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
             "\"complete\" = the packet satisfies this item; \"missing\" = it does " +
             "not; \"unknown\" = the loaded sources and packet do not let you tell.",
         },
-        citation: CITATION_PROPERTY,
+        statute_id: STATUTE_ID_PROPERTY,
       },
     },
   },
@@ -158,49 +169,64 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
       "blank you cannot source as a bracketed placeholder such as " +
       "\"[APN - from your property tax bill]\" rather than filling in a plausible " +
       "value. Max 4000 characters. " +
+      LAW_RULE +
+      " " +
       HOUSE_RULES,
     strict: true,
     eager_input_streaming: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
-      required: ["item_id", "text"],
+      required: ["item_id", "text", "statute_id"],
       properties: {
         item_id: ITEM_ID_PROPERTY,
         text: {
           type: "string",
           description:
-            "The proposed text, at most 4000 characters. No invented statute " +
-            "numbers, fees, dates or APNs - use a bracketed placeholder instead.",
+            "The proposed text, at most 4000 characters. No statute or section " +
+            "numbers, no code citations, no ranges, no bill numbers, no URLs, and " +
+            "no invented fees, dates or APNs - use a bracketed placeholder for a " +
+            "blank you cannot source, and `statute_id` for law.",
         },
-        citation: CITATION_PROPERTY,
+        statute_id: STATUTE_ID_PROPERTY,
       },
     },
   },
   {
     name: "add_note",
     description:
-      "Attach a short explanatory note to one checklist item: why it is needed, " +
-      "what the applicant has to go and get, or exactly what is still unknown and " +
-      "who can answer it. Use this instead of guessing when the loaded sources are " +
-      "silent. Max 4000 characters. " +
+      "Attach a short explanatory note: why an item is needed, what the applicant " +
+      "has to go and get, or exactly what is still unknown and who can answer it. " +
+      "Use this instead of guessing when the loaded sources are silent. This is " +
+      "the one tool whose `item_id` may be null, for a note about the application " +
+      "as a whole rather than about a single item; when the note really is about " +
+      "one item, name it. Max 4000 characters. " +
+      LAW_RULE +
+      " " +
       HOUSE_RULES,
     strict: true,
     eager_input_streaming: true,
     input_schema: {
       type: "object",
       additionalProperties: false,
-      required: ["item_id", "text"],
+      required: ["item_id", "text", "statute_id"],
       properties: {
-        item_id: ITEM_ID_PROPERTY,
+        item_id: {
+          type: NULLABLE_STRING,
+          description:
+            "The id of a checklist item in the loaded city configuration, copied " +
+            "exactly, when the note is about that item. Null for a note about the " +
+            "whole application. Never invent an id: null is correct, a guess is not.",
+        },
         text: {
           type: "string",
           description:
             "The note, at most 4000 characters. Say \"unknown\" plainly where the " +
-            "loaded sources do not answer the question; never fill the gap with a " +
-            "statute, section, fee or date from memory.",
+            "loaded sources do not answer the question. No statute or section " +
+            "numbers, no code citations, no ranges, no bill numbers and no URLs - " +
+            "use `statute_id` for law.",
         },
-        citation: CITATION_PROPERTY,
+        statute_id: STATUTE_ID_PROPERTY,
       },
     },
   },
