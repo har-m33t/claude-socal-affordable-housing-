@@ -434,6 +434,132 @@ describe("partial backing (finding 2: one backed reference must not carry the re
   });
 });
 
+// ------------------------------------------------- hardening regressions
+
+/**
+ * Third round of regressions: a reference that vanishes, blank-rendering code
+ * points outside the format categories, and an ASCII word boundary applied to
+ * non-ASCII digits.
+ *
+ * Numbers still come from data/statutes.json. `2024` below is a plain number
+ * in a sentence, carried over from the reproduction case, not a legal date.
+ */
+
+const BRAILLE_BLANK = "⠀";
+const HANGUL_FILLER = "ㅤ";
+const THIN_SPACE = " ";
+
+/** Put `filler` between every character of `text`. */
+function breakWith(text: string, filler: string): string {
+  return Array.from(text).join(filler);
+}
+
+describe("vanishing references (fix 1: digit joining must not weld numbers)", () => {
+  const section = unconfirmedEntry.new_range;
+
+  it("still finds the statute when an ordinary space and another number follow", () => {
+    // Joining across the space welded this to "663332024", a 9-digit run no
+    // section pattern matches, and the reference disappeared entirely.
+    const reason = reasonOf(verifyEvent(event({ text: `Section ${section} 2024 applies.` }), statutes));
+    expect(reason).toContain(section);
+    expect(reason).toContain("unconfirmed");
+  });
+
+  it("still finds the statute when a newline and another number follow", () => {
+    const reason = reasonOf(
+      verifyEvent(event({ text: `Section ${section}\n2024 revision applies.` }), statutes),
+    );
+    expect(reason).toContain(section);
+    expect(reason).toContain("unconfirmed");
+  });
+
+  it("still finds the statute when a tab and another number follow", () => {
+    const reason = reasonOf(
+      verifyEvent(event({ text: `Section ${section}\t2024 applies.` }), statutes),
+    );
+    expect(reason).toContain(section);
+  });
+
+  it("still closes up a number broken by a hair-thin space", () => {
+    // U+2009 renders as almost nothing, so this is an evasion, not spacing.
+    // It has to be closed up BEFORE normalization: NFKD folds U+2009 into an
+    // ordinary space, after which it is indistinguishable from real spacing.
+    const broken = section.replace(/^(\d\d)/, `$1${THIN_SPACE}`);
+    expect(broken).not.toBe(section);
+
+    const reason = reasonOf(verifyEvent(event({ text: `Section ${broken} applies.` }), statutes));
+    expect(reason).toContain(section);
+    expect(reason).toContain("unconfirmed");
+  });
+
+  it("still closes up a number broken by a narrow no-break space", () => {
+    const broken = section.replace(/^(\d\d)/, "$1 ");
+    const reason = reasonOf(verifyEvent(event({ text: `Section ${broken} applies.` }), statutes));
+    expect(reason).toContain(section);
+  });
+
+  it("no longer welds two ordinary numbers into a section-shaped run", () => {
+    // Behavior change, and the right one: this is ordinary prose about a lot
+    // size, not a law claim. The previous blanket whitespace join turned
+    // "20 000" into "20000" and dropped the event.
+    expect(looksLikeLawClaim("The lot is 20 000 square feet after the lot split.")).toBe(false);
+  });
+});
+
+describe("blank-rendering code points (fix 2: category alone is not enough)", () => {
+  const section = unconfirmedEntry.new_range;
+
+  it("sees through U+2800 BRAILLE PATTERN BLANK, which is category So", () => {
+    const broken = breakWith(section, BRAILLE_BLANK);
+    const text = `Section ${broken} applies.`;
+    expect(looksLikeLawClaim(text)).toBe(true);
+
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain(section);
+    expect(reason).toContain("unconfirmed");
+  });
+
+  it("sees through U+3164 HANGUL FILLER, which is category Lo", () => {
+    const broken = breakWith(section, HANGUL_FILLER);
+    const text = `Section ${broken} applies.`;
+    expect(looksLikeLawClaim(text)).toBe(true);
+
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain(section);
+    expect(reason).toContain("unconfirmed");
+  });
+
+  it("sees through a blank-rendering character inside a law-asserting phrase", () => {
+    expect(looksLikeLawClaim(`This qualifies for ministeri${HANGUL_FILLER}al approval.`)).toBe(true);
+  });
+});
+
+describe("bill boundaries (fix 3: word boundary must not be ASCII-only)", () => {
+  const confirmedNewSection = confirmedEntry.new_range.split("-")[0] as string;
+
+  it("finds a bill reference written in Arabic-Indic digits beside a confirmed section", () => {
+    // The trailing ASCII \b saw no boundary after a non-ASCII numeral, so the
+    // whole bill match failed and the claim passed on the section alone.
+    const bill = `SB ${remapDigits("9", ARABIC_INDIC_ZERO)}`;
+    const text = `Gov Code ${confirmedNewSection} and ${bill} both require the city to approve this.`;
+
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain(bill);
+    expect(reason).toContain("statute map cannot back");
+  });
+
+  it("finds a bill reference written in fullwidth digits", () => {
+    const bill = `SB ${remapDigits("9", FULLWIDTH_ZERO)}`;
+    const reason = reasonOf(verifyEvent(event({ text: `${bill} lets you split the lot.` }), statutes));
+    expect(reason).toContain("statute map cannot back");
+  });
+
+  it("still does not trip on an ordinary word ending in a bill-like prefix", () => {
+    expect(looksLikeLawClaim("The slab 9 inches below grade is existing.")).toBe(false);
+    expect(looksLikeLawClaim("Lab 9 results are attached to the packet.")).toBe(false);
+  });
+});
+
 // ------------------------------------------------------ recorder + replay
 
 describe("recorder and replay", () => {
