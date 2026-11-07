@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { DEFAULT_CITY, getCityConfig, loadMockEvents } from "@/components/pointer/config";
-import { normalizeSource, type ChecklistItem, type Citation } from "@/components/pointer/contract";
+import { DEFAULT_CITY, PLAN, getCityConfig, loadMockEvents } from "@/components/pointer/config";
+import { normalizeSource, type Citation } from "@/components/pointer/contract";
+import { documentById, stepIndexOf, type PlanTarget } from "@/components/pointer/plan";
 import { foldEvents, loadDecisions, readiness, withDecisions, type Decisions } from "@/components/pointer/run-state";
 import { CitationChip, StatusPill } from "@/components/ui/bits";
 
@@ -11,29 +12,37 @@ export function ReadinessReport() {
   const [decisions, setDecisions] = useState<Decisions>({});
   useEffect(() => setDecisions(loadDecisions()), []);
 
-  // The report is the end state of the whole run, folded with the same reducer the editor uses.
-  const run = withDecisions(foldEvents(loadMockEvents().events, city), decisions);
-  const r = readiness(run, city);
-  const byId = Object.fromEntries(city.checklist.map((c, i) => [c.id, { c, n: i + 1 }])) as Record<string, { c: ChecklistItem; n: number }>;
-  const total = city.checklist.length;
+  // The report is the end state of the whole run, folded with the same reducer the editor uses,
+  // over every plan target (checklist boxes, form fields, files, fee sheet), not just the checklist.
+  const scope = { checklist: PLAN.targets };
+  const run = withDecisions(foldEvents(loadMockEvents().events, scope), decisions);
+  const r = readiness(run, scope);
+  const byId = Object.fromEntries(PLAN.targets.map((t) => [t.id, t])) as Record<string, PlanTarget>;
+  const total = PLAN.targets.length;
   const pct = Math.round((r.complete.length / total) * 100);
+  const where = (t: PlanTarget) => {
+    const step = PLAN.steps[stepIndexOf(PLAN, t.id)];
+    const doc = documentById(PLAN, t.doc);
+    return `${step ? `Step ${stepIndexOf(PLAN, t.id) + 1} · ${step.title}` : ""}${doc ? ` · ${doc.title}${t.page ? `, p. ${t.page}` : ""}` : ""}`;
+  };
 
   const allCitations = new Map<string, Citation>();
   for (const s of city.sources.map(normalizeSource)) allCitations.set(s.url, s);
+  for (const d of PLAN.documents) if (d.source_url) allCitations.set(d.source_url, { title: d.title, url: d.source_url, checked_date: d.checked_date ?? undefined });
   for (const it of Object.values(run.items)) for (const c of it.citations) allCitations.set(c.url, c);
 
   const Row = ({ id }: { id: string }) => {
-    const { c, n } = byId[id];
+    const t = byId[id];
     const st = run.items[id];
     const accepted = st?.suggestions.filter((s) => s.decision === "accepted") ?? [];
     const pending = st?.suggestions.filter((s) => s.decision === "pending") ?? [];
     return (
       <li className="box-row">
         <div className="flex items-start justify-between gap-3">
-          <p className="font-medium">
-            <span className="mr-1.5 font-mono text-xs tabular-nums text-[var(--fg-muted)]">{n}.</span>
-            {c.text}
-          </p>
+          <div>
+            <p className="font-medium">{t.label}</p>
+            <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{where(t)}</p>
+          </div>
           <StatusPill status={st?.status} />
         </div>
         {st?.statusText && <p className="mt-1 text-sm text-[var(--fg-muted)]">{st.statusText}</p>}
@@ -69,14 +78,14 @@ export function ReadinessReport() {
           </div>
         </div>
         <p className="mt-1 text-sm text-[var(--fg-muted)]">
-          {city.city} · ADU · checklist checked {city.checked_date ?? "unknown"} · from the mock run with a made-up applicant.
+          {city.city} · ADU · {PLAN.steps.length} steps across {PLAN.documents.length} documents · checked {PLAN.checked_date ?? "unknown"} · from the scripted run with a made-up applicant.
           This report is for you and your designer. Pointer does not submit it.
         </p>
       </div>
 
       <div className="box anim-fade-up mt-6">
         <div className="box-header justify-between">
-          <h2 className="box-title">Checklist progress</h2>
+          <h2 className="box-title">Plan progress</h2>
           <span className="text-sm tabular-nums text-[var(--fg-muted)]">{pct}%</span>
         </div>
         <div className="p-4">
@@ -93,6 +102,7 @@ export function ReadinessReport() {
             <span className="text-[var(--success)]">● {r.complete.length} complete</span>
             <span className="text-[var(--danger)]">● {r.missing.length} missing</span>
             <span className="text-[var(--neutral)]">● {r.unknown.length} unknown</span>
+            {r.drafted.length > 0 && <span className="text-[var(--accent)]">◐ {r.drafted.length} drafted, waiting on you</span>}
             {r.notReviewed.length > 0 && <span className="text-[var(--fg-muted)]">○ {r.notReviewed.length} not reviewed</span>}
           </p>
         </div>
@@ -100,6 +110,7 @@ export function ReadinessReport() {
 
       <Section title="Missing: fix these before you submit" ids={r.missing} Row={Row} />
       <Section title="Unknown: ask the city" ids={r.unknown} Row={Row} />
+      <Section title="Drafted: accept or reject in the editor" ids={r.drafted} Row={Row} />
       {r.flagged.length > 0 && (
         <section className="box mt-6">
           <h2 className="box-header box-title">
@@ -109,7 +120,24 @@ export function ReadinessReport() {
             {r.flagged.map((id) => (
               <li key={id} className="box-row text-sm">
                 <div className="lawlens-note rounded-md border-l-4 px-3 py-2">
-                  <span className="font-semibold">Item {byId[id].n}:</span> {run.items[id]?.highlightText?.replace(/^Law Lens:\s*/i, "")}
+                  <p>
+                    <span className="font-semibold">{byId[id].label}:</span>{" "}
+                    {run.items[id]?.statute
+                      ? `cites Gov. Code ${run.items[id]!.statute!.old}, now ${run.items[id]!.statute!.new_range}. May be out of date; confirm with the city.`
+                      : run.items[id]?.highlightText ?? "flagged for review."}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{where(byId[id])}</p>
+                  {run.items[id]?.statute && (
+                    <div className="mt-1.5">
+                      <CitationChip
+                        c={{
+                          title: run.items[id]!.statute!.title,
+                          url: run.items[id]!.statute!.source_url,
+                          checked_date: run.items[id]!.statute!.checked_date,
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </li>
             ))}

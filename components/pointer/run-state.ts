@@ -1,6 +1,6 @@
 // Pure reducer: the editor's state is a fold over agent events plus the applicant's
 // accept/reject decisions. The report page reuses it, so the editor and the report always agree.
-import { normalizeCitation, type AgentEvent, type CityConfig, type Citation, type ItemStatus } from "./contract";
+import { normalizeCitation, type AgentEvent, type CityConfig, type Citation, type ItemStatus, type StatuteRef } from "./contract";
 
 /** The ids an event may name: a city checklist, or a plan's targets. Both have `{ id }` entries. */
 export interface TargetScope {
@@ -19,6 +19,8 @@ export interface ItemState {
   statusText?: string;
   highlighted: boolean;
   highlightText?: string;
+  /** Law Lens: the confirmed statute this item's text cites, as rendered by the server. */
+  statute?: StatuteRef;
   notes: string[];
   suggestions: Suggestion[];
   citations: Citation[];
@@ -52,7 +54,11 @@ export function applyEvent(state: RunState, event: AgentEvent, index: number, ci
     return { ...state, log: [...state.log, { index, event, citation, rejected: `unknown item_id "${event.item_id}"` }] };
   }
   const prev = state.items[event.item_id] ?? emptyItem();
-  const item: ItemState = { ...prev, citations: citation ? [...prev.citations, citation] : prev.citations };
+  const lawSource: Citation | undefined = event.statute_ref
+    ? { title: event.statute_ref.title, url: event.statute_ref.source_url, checked_date: event.statute_ref.checked_date }
+    : undefined;
+  const sources = [citation, lawSource].filter((c): c is Citation => Boolean(c));
+  const item: ItemState = { ...prev, citations: sources.length ? [...prev.citations, ...sources] : prev.citations };
   let pointedItem = state.pointedItem;
 
   switch (event.tool) {
@@ -63,6 +69,7 @@ export function applyEvent(state: RunState, event: AgentEvent, index: number, ci
       pointedItem = event.item_id;
       item.highlighted = true;
       item.highlightText = event.text;
+      if (event.statute_ref) item.statute = event.statute_ref;
       break;
     case "mark_item":
       if (!event.status) {
@@ -111,17 +118,22 @@ export interface Readiness {
   complete: string[];
   missing: string[];
   unknown: string[];
+  /** Pointer drafted a value the homeowner hasn't accepted or rejected yet. */
+  drafted: string[];
   notReviewed: string[];
   flagged: string[];
 }
 
-export function readiness(state: RunState, city: CityConfig): Readiness {
-  const r: Readiness = { complete: [], missing: [], unknown: [], notReviewed: [], flagged: [] };
+export function readiness(state: RunState, city: TargetScope): Readiness {
+  const r: Readiness = { complete: [], missing: [], unknown: [], drafted: [], notReviewed: [], flagged: [] };
   for (const c of city.checklist) {
     const it = state.items[c.id];
     if (it?.highlighted) r.flagged.push(c.id);
-    if (!it?.status) r.notReviewed.push(c.id);
-    else r[it.status].push(c.id);
+    if (it?.status) r[it.status].push(c.id);
+    // A form field is filled in once the homeowner accepts a drafted value; until then it waits on them.
+    else if (it?.suggestions.some((s) => s.decision === "accepted")) r.complete.push(c.id);
+    else if (it?.suggestions.some((s) => s.decision === "pending")) r.drafted.push(c.id);
+    else r.notReviewed.push(c.id);
   }
   return r;
 }
