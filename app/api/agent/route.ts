@@ -26,7 +26,7 @@ import { hasApiKey, recordingEnabled } from "../../../lib/agent/config";
 import { runAgent } from "../../../lib/agent/loop";
 import {
   clientKey,
-  createRateLimiter,
+  degradedRateLimiter,
   rateLimitOptions,
   requestRateLimiter,
 } from "../../../lib/agent/ratelimit";
@@ -147,7 +147,7 @@ export async function POST(request: Request): Promise<Response> {
       // to replace - an escalation, not a fallback.
       const configured = durableBackend() !== null;
       decision = configured
-        ? createRateLimiter({ ...caps, ...degradedCaps(caps) }).check(who)
+        ? degradedRateLimiter({ ...caps, ...degradedCaps(caps) }).check(who)
         : requestRateLimiter().check(who);
     }
     if (!decision.ok) {

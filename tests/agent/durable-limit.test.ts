@@ -269,3 +269,39 @@ describe("degradedCaps - a broken backend must not RAISE the ceiling", () => {
     expect(d.max).toBeLessThanOrEqual(2);
   });
 });
+
+describe("degradedRateLimiter - counts must carry across requests", () => {
+  // The bug this pins: building the degraded limiter per request gave every
+  // request fresh counters, so its cap was never reached. That is fail-open,
+  // which defeats the entire point of degrading rather than falling back.
+  it("returns the SAME limiter instance on repeated calls", async () => {
+    const { degradedRateLimiter, resetRateLimiter } = await import("../../lib/agent/ratelimit");
+    resetRateLimiter();
+    const caps = { max: 2, globalMax: 2, windowMs: 60_000 };
+    expect(degradedRateLimiter(caps)).toBe(degradedRateLimiter(caps));
+    resetRateLimiter();
+  });
+
+  it("actually refuses once the degraded cap is reached, across separate calls", async () => {
+    const { degradedRateLimiter, resetRateLimiter } = await import("../../lib/agent/ratelimit");
+    resetRateLimiter();
+    const caps = { max: 2, globalMax: 2, windowMs: 60_000 };
+    const hit = () => degradedRateLimiter(caps).check("ip:same");
+    expect(hit().ok).toBe(true);
+    expect(hit().ok).toBe(true);
+    // A per-request limiter would still say true here.
+    expect(hit().ok).toBe(false);
+    resetRateLimiter();
+  });
+
+  it("is dropped by resetRateLimiter so a test cannot leak state into the next", async () => {
+    const { degradedRateLimiter, resetRateLimiter } = await import("../../lib/agent/ratelimit");
+    const caps = { max: 1, globalMax: 1, windowMs: 60_000 };
+    resetRateLimiter();
+    expect(degradedRateLimiter(caps).check("ip:x").ok).toBe(true);
+    expect(degradedRateLimiter(caps).check("ip:x").ok).toBe(false);
+    resetRateLimiter();
+    expect(degradedRateLimiter(caps).check("ip:x").ok).toBe(true);
+    resetRateLimiter();
+  });
+});

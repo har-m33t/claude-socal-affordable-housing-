@@ -182,7 +182,27 @@ export function requestRateLimiter(): RateLimiter {
   return shared;
 }
 
+/**
+ * The limiter used when a durable backend is CONFIGURED but not answering.
+ *
+ * Memoized at module scope for the same reason `requestRateLimiter` is: a
+ * limiter built per request starts from zero every time, so its cap is never
+ * reached and the "degraded" path is really fail-open. Counts must carry
+ * across requests in the instance to mean anything.
+ */
+let degradedShared: RateLimiter | null = null;
+
+export function degradedRateLimiter(
+  caps: { max: number; globalMax: number; windowMs: number },
+): RateLimiter {
+  if (degradedShared === null) {
+    degradedShared = createRateLimiter(caps);
+  }
+  return degradedShared;
+}
+
 /** Drops the shared limiter so the next call re-reads the env. For tests. */
 export function resetRateLimiter(): void {
   shared = null;
+  degradedShared = null;
 }
