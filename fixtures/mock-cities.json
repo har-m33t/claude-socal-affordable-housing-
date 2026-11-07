@@ -1,0 +1,243 @@
+{
+  "_mock": "MOCK FIXTURE. City names from the event bundle's lanes/2-clear-it/data/oc-cities.json (34 OC cities). Statuses are placeholders until Team 1's data/cities/*.json land; only Anaheim is marked live, and only as a mock.",
+  "cities": [
+    {
+      "city": "Aliso Viejo",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Anaheim",
+      "status": "live",
+      "verified": true,
+      "checked_date": "2026-11-06",
+      "checklist_url": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "city": "Brea",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Buena Park",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Costa Mesa",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Cypress",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Dana Point",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Fountain Valley",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Fullerton",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Garden Grove",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Huntington Beach",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Irvine",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "La Habra",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "La Palma",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Laguna Beach",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Laguna Hills",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Laguna Niguel",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Laguna Woods",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Lake Forest",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Los Alamitos",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Mission Viejo",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Newport Beach",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Orange",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Placentia",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Rancho Santa Margarita",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "San Clemente",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "San Juan Capistrano",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Santa Ana",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Seal Beach",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Stanton",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Tustin",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Villa Park",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Westminster",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    },
+    {
+      "city": "Yorba Linda",
+      "status": "not_checked",
+      "verified": false,
+      "checked_date": null,
+      "checklist_url": null
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "_mock": "MOCK FIXTURE. Stands in for Team 1's types/adu.json and types/sb9.json.",
+  "types": [
+    {
+      "type": "adu",
+      "name": "ADU / JADU",
+      "verified": true
+    },
+    {
+      "type": "sb9",
+      "name": "SB 9 lot split / duplex",
+      "verified": false,
+      "note": "rules not yet verified"
+    }
+  ]
+}
