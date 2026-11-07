@@ -1,0 +1,9 @@
+{
+  "city": "",
+  "verified": false,
+  "checked_date": null,
+  "sources": [],
+  "notes": "Copy this file to cities/<city>.json. Leave verified:false until a person has read the city's checklist and set checked_date. Never invent an item, a rule, a fee or a section number: write \"unknown\".",
+  "fast_paths": [],
+  "checklist": []
+}

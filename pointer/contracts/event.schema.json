@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pointer/contracts/event.schema.json",
+  "title": "Agent action event",
+  "description": "One action the agent took, streamed to the browser. FROZEN 11:55 - changing this breaks every team.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool", "item_id", "ts"],
+  "properties": {
+    "tool": { "enum": ["point_to", "highlight", "mark_item", "draft_field", "add_note"] },
+    "item_id": { "type": "string", "minLength": 1, "description": "A checklist item id that exists in the loaded city file." },
+    "status": { "enum": ["complete", "missing", "unknown"], "description": "mark_item only." },
+    "text": { "type": "string", "maxLength": 4000, "description": "draft_field and add_note only. Shown as an accept/reject suggestion." },
+    "citation": { "$ref": "#/$defs/citation" },
+    "ts": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_url", "checked_date"],
+      "properties": {
+        "source_url": { "type": "string", "format": "uri" },
+        "checked_date": { "type": "string", "format": "date" },
+        "detail": { "type": "string", "maxLength": 500, "description": "Section number, page, or quoted line." }
+      }
+    }
+  }
+}

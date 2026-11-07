@@ -1,0 +1,53 @@
+{
+  "city": "Anaheim",
+  "verified": false,
+  "checked_date": null,
+  "sources": [
+    "https://www.anaheim.net/6349/ADU-Anaheim",
+    "https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue",
+    "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+  ],
+  "notes": "verified:false ON PURPOSE. The checklist items below are the organizers' summary from the event bundle's Lane 2 data list (checked 2026-11-06, VERIFIED-EXA), NOT read off the PDF. page and box are null, so the hand cannot point at them. Team 1 flips verified to true only after a person opens the November 2025 PDF, extracts each item with its page and box, and sets checked_date. Until then the agent must refuse to advise on this city. ADU Express eligibility rules are deliberately empty: nobody has read the city page text yet.",
+  "fast_paths": [
+    {
+      "id": "adu-express",
+      "name": "ADU Express",
+      "rules": [],
+      "source": "https://www.anaheim.net/6349/ADU-Anaheim"
+    }
+  ],
+  "checklist": [
+    {
+      "id": "sewer-capacity-verification",
+      "text": "Sewer capacity verification",
+      "page": null,
+      "box": null,
+      "doc_type": "unknown",
+      "source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "meter-location",
+      "text": "Water meter location",
+      "page": null,
+      "box": null,
+      "doc_type": "unknown",
+      "source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "new-address",
+      "text": "New address assignment",
+      "page": null,
+      "box": null,
+      "doc_type": "unknown",
+      "source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    },
+    {
+      "id": "jadu-covenant",
+      "text": "JADU covenant",
+      "page": null,
+      "box": null,
+      "doc_type": "unknown",
+      "source": "https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist"
+    }
+  ]
+}

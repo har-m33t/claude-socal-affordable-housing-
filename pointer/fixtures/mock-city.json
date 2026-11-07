@@ -1,0 +1,21 @@
+{
+  "city": "FIXTURE CITY (not a real jurisdiction - test data only)",
+  "verified": true,
+  "checked_date": "2026-11-07",
+  "sources": ["https://example.invalid/fixture-checklist"],
+  "notes": "SYNTHETIC. Every item, box and rule here is invented to exercise the engine. Never show this city to a user and never cite it. verified:true so the happy path is testable; the boxes are made up so the hand has somewhere to point.",
+  "fast_paths": [
+    {
+      "id": "fixture-express",
+      "name": "Fixture Express",
+      "rules": ["Detached unit under 800 sq ft", "No variance requested"],
+      "source": "https://example.invalid/fixture-checklist"
+    }
+  ],
+  "checklist": [
+    { "id": "item-1", "text": "Completed application form", "page": 1, "box": [72, 640, 420, 18], "doc_type": "adu_application", "source": "https://example.invalid/fixture-checklist" },
+    { "id": "item-2", "text": "Site plan drawn to scale", "page": 1, "box": [72, 610, 420, 18], "doc_type": "site_plan", "source": "https://example.invalid/fixture-checklist" },
+    { "id": "item-3", "text": "Owner affidavit, signed", "page": 2, "box": [72, 500, 420, 18], "doc_type": "owner_affidavit", "source": "https://example.invalid/fixture-checklist" },
+    { "id": "item-4", "text": "Recorded property covenant", "page": 2, "box": [72, 470, 420, 18], "doc_type": "covenant", "source": "https://example.invalid/fixture-checklist" }
+  ]
+}

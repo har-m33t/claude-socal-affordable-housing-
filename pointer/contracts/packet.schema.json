@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pointer/contracts/packet.schema.json",
+  "title": "Applicant packet manifest",
+  "description": "FROZEN 11:55. The made-up applicant's uploaded files. declared_type is what the applicant says it is; the agent classifies and may disagree.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["applicant", "synthetic", "files"],
+  "properties": {
+    "applicant": { "type": "string" },
+    "synthetic": { "const": true, "description": "Always true. Pointer never handles a real applicant's paperwork." },
+    "scenario": { "type": "string" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "declared_type"],
+        "properties": {
+          "name": { "type": "string" },
+          "declared_type": { "type": "string" },
+          "pages": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}

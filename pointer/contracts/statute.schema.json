@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pointer/contracts/statute.schema.json",
+  "title": "Old-to-new statute mapping (Law Lens)",
+  "description": "FROZEN 11:55. Law Lens flags only entries in this file. confirmed:false is never shown as current law.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["old", "new_range", "title", "source_url", "checked_date", "confirmed"],
+    "properties": {
+      "old": { "type": "string", "description": "The repealed or renumbered citation as it appears in city documents." },
+      "new_range": { "type": "string", "description": "Current section or range. A range when no single section is confirmed." },
+      "title": { "type": "string" },
+      "source_url": { "type": "string", "format": "uri" },
+      "checked_date": { "type": "string", "format": "date" },
+      "confirmed": { "type": "boolean", "description": "True only when a person opened the source and read it." }
+    }
+  }
+}

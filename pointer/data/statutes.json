@@ -1,0 +1,18 @@
+[
+  {
+    "old": "65852.2",
+    "new_range": "66310-66342",
+    "title": "Accessory dwelling units",
+    "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=66314",
+    "checked_date": "2026-11-06",
+    "confirmed": true
+  },
+  {
+    "old": "65852.22",
+    "new_range": "66333",
+    "title": "Junior accessory dwelling units",
+    "source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=66333",
+    "checked_date": "2026-11-06",
+    "confirmed": false
+  }
+]
