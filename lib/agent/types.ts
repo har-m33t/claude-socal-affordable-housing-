@@ -144,7 +144,17 @@ export interface PacketManifest {
 
 /** Result of validating one tool call from the model. */
 export type ValidationResult =
-  | { ok: true; event: AgentEvent }
+  | {
+      ok: true;
+      event: AgentEvent;
+      /**
+       * The statute id the model passed, shape-checked only. The LOOP resolves
+       * it via resolveStatuteId and sets `event.statute_ref` from the result.
+       * It is deliberately absent from `event`: an unresolved id must never
+       * reach the UI.
+       */
+      statute_id?: string;
+    }
   | { ok: false; error: string };
 
 /**

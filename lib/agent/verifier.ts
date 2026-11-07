@@ -83,7 +83,7 @@ const BLANK_RENDERING_BETWEEN_DIGITS =
  * longer be told apart from a space that was always a space.
  */
 const BLANK_INSIDE_NUMBER =
-  /(?<=\p{Nd})[\p{Cf}\p{Default_Ignorable_Code_Point}\p{Zs}\s\u2800\u115F\u1160\u3164\uFFA0]+(?=\p{Nd})/gu;
+  /(?<=\p{Nd})[\p{Cf}\p{Mn}\p{Me}\p{Default_Ignorable_Code_Point}\p{Zs}\s\u2800\u115F\u1160\u3164\uFFA0]+(?=\p{Nd})/gu;
 
 /** The two forms the detectors run against. */
 interface NormalizedText {
@@ -413,6 +413,11 @@ export function verifyEvent(event: AgentEvent, statutes: StatuteEntry[]): Verify
 }
 
 /** The frozen `VerifierModule` surface, so tsc checks the shape for us. */
-export const verifier: VerifierModule = { verifyEvent, looksLikeLawClaim };
+export const verifier: VerifierModule = {
+  verifyEvent,
+  looksLikeLawClaim,
+  loadStatuteTable,
+  resolveStatuteId,
+};
 
 export default verifier;

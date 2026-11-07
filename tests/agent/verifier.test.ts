@@ -15,7 +15,7 @@ import os from "node:os";
 import path from "node:path";
 
 import statutesJson from "../../data/statutes.json";
-import type { AgentEvent, Citation, StatuteEntry, StreamFrame } from "../../lib/agent/types";
+import type { AgentEvent, StatuteEntry, StreamFrame } from "../../lib/agent/types";
 import {
   PROSE_LAW_REASON,
   loadStatuteTable,
@@ -38,7 +38,9 @@ const confirmedEntry: StatuteEntry = foundConfirmed;
 const unconfirmedEntry: StatuteEntry = foundUnconfirmed;
 
 /** A real, human-checked citation, taken straight out of the statute table. */
-const goodCitation: Citation = {
+// No longer a contract type: the model cannot supply a citation. Kept so the
+// tests below can prove that attaching one anyway buys the sentence nothing.
+const goodCitation = {
   source_url: confirmedEntry.source_url,
   checked_date: confirmedEntry.checked_date,
 };
@@ -115,10 +117,10 @@ describe("verifyEvent prose backstop", () => {
   it("drops a prose law assertion that carries a well-formed citation", () => {
     // The citation-backed escape is gone. Law does not belong in prose at all,
     // so a citation no longer buys the sentence anything.
-    const claim = event({
-      text: "State law requires ministerial approval for a qualifying unit.",
+    const claim = {
+      ...event({ text: "State law requires ministerial approval for a qualifying unit." }),
       citation: goodCitation,
-    });
+    } as unknown as AgentEvent;
     expect(reasonOf(verifyEvent(claim, statutes))).toBe(PROSE_LAW_REASON);
   });
 
@@ -136,7 +138,7 @@ describe("verifyEvent prose backstop", () => {
 
   it("gives the same reason whatever the citation looks like", () => {
     const text = "The city must approve it ministerially.";
-    const variants: Array<Citation | undefined> = [
+    const variants: Array<Record<string, string> | undefined> = [
       undefined,
       { source_url: "", checked_date: confirmedEntry.checked_date },
       { source_url: "   ", checked_date: confirmedEntry.checked_date },
@@ -148,7 +150,8 @@ describe("verifyEvent prose backstop", () => {
       goodCitation,
     ];
     for (const citation of variants) {
-      expect(reasonOf(verifyEvent(event({ text, citation }), statutes))).toBe(PROSE_LAW_REASON);
+      const claim = { ...event({ text }), citation } as unknown as AgentEvent;
+      expect(reasonOf(verifyEvent(claim, statutes))).toBe(PROSE_LAW_REASON);
     }
   });
 
@@ -536,7 +539,6 @@ describe("recorder and replay", () => {
           tool: "add_note",
           item_id: "item-2",
           text: "Your packet is missing the title sheet.",
-          citation: goodCitation,
           ts,
         },
       },
