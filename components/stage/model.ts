@@ -89,11 +89,16 @@ const DECLARED = /\(declared type:\s*([^)]+)\)/i;
  * to the packet file of the same name when there is one; then any packet files no
  * target names, so nothing the homeowner has is hidden.
  */
+/** Targets on the file board are file slots unless the plan marks them as board summaries. */
+function isFileTarget(t: PlanTarget): boolean {
+  return !t.summary;
+}
+
 export function fileCards(plan: Plan, docId: string, packet: PacketFile[], items: Record<string, ItemState>): FileCard[] {
   const byName = new Map(packet.map((f) => [f.name, f]));
   const used = new Set<string>();
   const cards: FileCard[] = plan.targets
-    .filter((t) => t.doc === docId)
+    .filter((t) => t.doc === docId && isFileTarget(t))
     .map((t) => {
       const file = byName.get(t.label);
       if (file) used.add(file.name);
@@ -111,6 +116,20 @@ export function fileCards(plan: Plan, docId: string, packet: PacketFile[], items
     if (!used.has(f.name)) cards.push({ name: f.name, declaredType: f.declared_type, highlighted: false });
   }
   return cards;
+}
+
+export interface BoardSummary {
+  targetId: string;
+  label: string;
+  status?: ItemState["status"];
+  statusText?: string;
+}
+
+/** Board-level targets on the packet document (not files), in plan order. */
+export function boardSummaries(plan: Plan, docId: string, items: Record<string, ItemState>): BoardSummary[] {
+  return plan.targets
+    .filter((t) => t.doc === docId && !isFileTarget(t))
+    .map((t) => ({ targetId: t.id, label: t.label, status: items[t.id]?.status, statusText: items[t.id]?.statusText }));
 }
 
 export interface SlotGroup {

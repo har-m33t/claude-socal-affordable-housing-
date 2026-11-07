@@ -58,7 +58,8 @@
       "id": "packet-summary",
       "doc": "packet",
       "label": "Your packet, all files",
-      "text": "3 files: sewer-capacity-email.pdf (sewer_capacity_verification), new-address-request.pdf (new_address_request), floor-plan.pdf (unknown). Made-up applicant files."
+      "text": "3 files: sewer-capacity-email.pdf (sewer_capacity_verification), new-address-request.pdf (new_address_request), floor-plan.pdf (unknown). Made-up applicant files.",
+      "summary": true
     },
     {
       "id": "z412-overview",

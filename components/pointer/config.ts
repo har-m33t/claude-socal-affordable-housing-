@@ -6,7 +6,7 @@ import cityAnaheim from "@/data/cities/anaheim.json";
 import typeAdu from "@/data/types/adu.json";
 import citiesFixture from "@/fixtures/mock-cities.json";
 import typesFixture from "@/fixtures/mock-types.json";
-import packetFixture from "@/fixtures/mock-packet.json";
+import packetManifest from "@/data/packet/manifest.json";
 import planRunFixture from "@/fixtures/plan-run.json";
 import planAnaheimAdu from "@/data/plans/anaheim-adu.json";
 import { checkPlan, type Plan } from "./plan";
@@ -54,7 +54,8 @@ export const PROJECT_TYPES: ProjectType[] = (typesFixture.types as ProjectType[]
   t.type === "adu" ? { ...t, verified: Boolean((typeAdu as { verified?: boolean }).verified) } : t,
 );
 
-export const PACKET_FILES: PacketFile[] = packetFixture.files as PacketFile[];
+/** The made-up applicant's files (Team 1's packet manifest), the same files the plan's file slots name. */
+export const PACKET_FILES: PacketFile[] = packetManifest.files as PacketFile[];
 
 export function getCityConfig(city: string): CityConfig | undefined {
   return CITY_CONFIGS[city];

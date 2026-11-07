@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { PLAN } from "@/components/pointer/config";
+import { PACKET_FILES, PLAN } from "@/components/pointer/config";
 import type { Plan } from "@/components/pointer/plan";
 import { emptyItem, type ItemState } from "@/components/pointer/run-state";
 import {
+  boardSummaries,
   answerAnnouncement,
   docProgress,
   fileCards,
@@ -120,7 +121,12 @@ describe("file board", () => {
     const slots = slotGroups(PLAN).flatMap((g) => g.options.map((o) => o.id));
     expect(new Set(slots)).toEqual(new Set(PLAN.targets.map((t) => t.id)));
     const packet = PLAN.documents.find((d) => d.kind === "packet")!;
-    const cards = fileCards(PLAN, packet.id, [], {});
-    expect(cards.every((c) => c.targetId?.startsWith("file-"))).toBe(true);
+    const cards = fileCards(PLAN, packet.id, PACKET_FILES, {});
+    expect(cards.map((c) => c.name)).toEqual(PACKET_FILES.map((f) => f.name));
+    expect(cards.every((c) => c.targetId)).toBe(true);
+    // Board-level targets are summaries, never file cards.
+    const summaries = boardSummaries(PLAN, packet.id, {});
+    expect(summaries.map((s) => s.targetId)).toContain("packet-summary");
+    expect(cards.some((c) => c.targetId === "packet-summary")).toBe(false);
   });
 });

@@ -34,6 +34,11 @@ export interface PlanTarget {
   page?: number;
   box?: [number, number, number, number];
   source_url?: string;
+  /**
+   * Packet documents only: true when the target is about the board as a whole
+   * (e.g. "Your packet, all files") rather than one file slot.
+   */
+  summary?: boolean;
 }
 
 export type StepKind = "organize" | "read" | "law" | "form" | "gather" | "final";

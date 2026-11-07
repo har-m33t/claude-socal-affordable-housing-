@@ -23,7 +23,7 @@ import type { PacketFile } from "@/components/pointer/contract";
 import { targetById, type Plan, type PlanDocument } from "@/components/pointer/plan";
 import type { ItemState } from "@/components/pointer/run-state";
 import { countByKind, createRedactor, RedactionPreview, validateUpload, type RedactionSpan, type Redactor, type UploadKind } from "@/lib/redact";
-import { fileCards, formatBytes, slotGroups, type FileCard } from "./model";
+import { boardSummaries, fileCards, formatBytes, slotGroups, type BoardSummary, type FileCard } from "./model";
 import { extractPdfText } from "./pdfjs";
 
 interface Props {
@@ -48,6 +48,7 @@ interface AddedFile {
 
 export function FileBoard({ plan, doc, packet, items, planTargetId, answerTargetId, selectedTargetId, onSelectTarget }: Props) {
   const cards = fileCards(plan, doc.id, packet, items);
+  const summaries = boardSummaries(plan, doc.id, items);
   const [added, setAdded] = useState<AddedFile[]>([]);
   const [adding, setAdding] = useState(false);
   // One redactor per session: the same name gets the same token in every file.
@@ -67,6 +68,17 @@ export function FileBoard({ plan, doc, packet, items, planTargetId, answerTarget
           Add a file
         </button>
       </header>
+
+      {summaries.map((sm) => (
+        <SummaryRow
+          key={sm.targetId}
+          summary={sm}
+          pointed={sm.targetId === planTargetId}
+          answered={sm.targetId === answerTargetId}
+          selected={sm.targetId === selectedTargetId}
+          onSelect={onSelectTarget}
+        />
+      ))}
 
       <ul className="stage-file-grid" aria-label="Files">
         {cards.map((c, i) => (
@@ -156,6 +168,47 @@ function FileCardView({
       onClick={() => onSelect(id)}
     >
       {body}
+    </button>
+  );
+}
+
+/** A board-level target ("Your packet, all files"): a full-width row both pointers can land on. */
+function SummaryRow({
+  summary,
+  pointed,
+  answered,
+  selected,
+  onSelect,
+}: {
+  summary: BoardSummary;
+  pointed: boolean;
+  answered: boolean;
+  selected: boolean;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      data-target-id={summary.targetId}
+      className="stage-file-card anim-fade-up mb-3 w-full"
+      data-status={summary.status}
+      data-pointed={pointed || undefined}
+      data-answer={answered || undefined}
+      aria-pressed={selected}
+      data-selected={selected || undefined}
+      onClick={() => onSelect(summary.targetId)}
+    >
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-semibold text-[var(--fg)]">{summary.label}</span>
+        {summary.status ? (
+          <span className="stage-label" data-status={summary.status}>
+            {STATUS_LABEL[summary.status]}
+          </span>
+        ) : (
+          <span className="stage-label">Not checked yet</span>
+        )}
+      </span>
+      {summary.statusText && <span className="mt-1.5 block text-[12px] leading-snug text-[var(--fg-muted)]">{summary.statusText}</span>}
     </button>
   );
 }
@@ -320,7 +373,7 @@ function AddFileDrawer({
                 </p>
                 {draft.note && <p className="mt-1 text-[var(--fg-muted)]">{draft.note}</p>}
                 {draft.original && (
-                  <RedactionPreview className="mt-3" original={draft.original} redacted={draft.redacted} spans={draft.spans} title="What would be hidden" />
+                  <RedactionPreview className="mt-3" original={draft.original} redacted={draft.redacted} spans={draft.spans} title="What would be hidden" afterLabel="After (what Pointer would share if you ask it about this file)" />
                 )}
               </div>
             )}
