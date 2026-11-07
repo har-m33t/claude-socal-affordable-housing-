@@ -15,13 +15,14 @@ from it.
 | `statutes.json` | Law Lens old-to-new map, quoted from the Handbook with page links |
 | `law-flags.json` | Where Anaheim's checklist disagrees with state law or with another Anaheim page |
 | `packet/` | **Made-up** applicant: `manifest.json`, `applicant.json` (values redaction must catch), 3 PDFs |
+| `docs/anaheim-adu-checklist.pdf` | Unchanged copy of Anaheim's public Nov 2025 checklist, the PDF the boxes refer to. `anaheim.json` points at it with `checklist_pdf`; copy it under the app's `public/` at integration |
 | `processed/anaheim-adu-checklist-lines.json` | Every text line of the checklist PDF with page and box |
 
 **Boxes** are `[x, y, w, h]` in PDF points at scale 1, origin top-left (pdf.js viewport
 coordinates). Multiply by the render scale.
 
-**Fields beyond the plan's contract:** checklist items carry `applies_to` (`adu_and_jadu` or
-`jadu`). `statutes.json` wraps its entries in `{"about", "statutes": [...]}`.
+**Fields beyond the plan's contract:** cities carry `checklist_pdf` (proposed by Team 2); checklist
+items carry `applies_to` (`adu_and_jadu` or `jadu`). `statutes.json` wraps its entries in `{"about", "statutes": [...]}`.
 
 **Rebuild** (sources are in `data/raw/`, which git ignores; download URLs are in each file):
 

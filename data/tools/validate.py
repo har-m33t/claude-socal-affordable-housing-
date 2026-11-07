@@ -80,6 +80,10 @@ def check_city(path: Path, c: dict) -> None:
             err(path, "verified city needs checked_date")
         if not c.get("checklist"):
             err(path, "verified city needs a checklist")
+    if c.get("checklist") and not c.get("checklist_pdf"):
+        err(path, "a city with checklist boxes needs checklist_pdf, the PDF the boxes refer to")
+    if c.get("checklist_pdf") and not (ROOT / c["checklist_pdf"]).is_file():
+        err(path, f"checklist_pdf not found: {c['checklist_pdf']}")
     for s in c.get("sources", []):
         if not str(s.get("url", "")).startswith("https://"):
             err(path, f"source without https url: {s.get('title')}")

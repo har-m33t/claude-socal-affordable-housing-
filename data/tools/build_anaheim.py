@@ -110,6 +110,10 @@ def main() -> int:
         "city": "Anaheim",
         "verified": True,  # reviewed by the Team 1 lead, 2026-11-07
         "checked_date": CHECKED,
+        # Repo-relative copy of the public checklist PDF that the boxes refer to
+        # (unchanged from the city's download; the source URL is the third source below).
+        # Team 2's viewer serves it; copy it under the app's public/ folder at integration.
+        "checklist_pdf": "data/docs/anaheim-adu-checklist.pdf",
         "sources": [
             {"title": "ADU Anaheim (three ways to approve an ADU, incl. ADU Express)",
              "url": ADU_PAGE, "checked_date": CHECKED},

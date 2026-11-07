@@ -2,6 +2,7 @@
   "city": "Anaheim",
   "verified": true,
   "checked_date": "2026-11-07",
+  "checklist_pdf": "data/docs/anaheim-adu-checklist.pdf",
   "sources": [
     {
       "title": "ADU Anaheim (three ways to approve an ADU, incl. ADU Express)",
