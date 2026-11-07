@@ -1,0 +1,8 @@
+export function ContactCity() {
+  return (
+    <div>
+      <a href="mailto:planning@example.gov?subject=ADU">Email the city</a>
+      <form action="https://permits.example.gov/apply" method="post"><button>Go</button></form>
+    </div>
+  );
+}
