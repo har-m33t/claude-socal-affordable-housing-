@@ -1,0 +1,19 @@
+{
+  "applicant": "Maria Ejemplo (made up)",
+  "synthetic": true,
+  "scenario": "MADE UP applicant packet for the Pointer demo. No real person or property. Detached ADU with a new electric meter, no JADU, so the meter spot report is required. Intentionally missing: the site plan for the new address request, and the meter spot report.",
+  "files": [
+    {
+      "name": "sewer-capacity-email.pdf",
+      "declared_type": "sewer_capacity_verification"
+    },
+    {
+      "name": "new-address-request.pdf",
+      "declared_type": "new_address_request"
+    },
+    {
+      "name": "floor-plan.pdf",
+      "declared_type": "unknown"
+    }
+  ]
+}

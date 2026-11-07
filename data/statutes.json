@@ -1,0 +1,68 @@
+{
+  "about": "Law Lens map from old ADU statute numbers to current ones. Every mapping is quoted from the HCD ADU Handbook (March 2026), read 2026-11-07 from data/raw/hcd-adu-handbook-2026-03.pdf; source_url points at the page. All entries confirmed by the Team 1 lead on 2026-11-07. The Handbook maps the four old numbers to the whole range 66310-66342, not to single sections, so Law Lens must show the range. Each entry has a stable id the model names in statute_id; the server resolves it (strictly: an entry with an id no longer resolves on old).",
+  "statutes": [
+    {
+      "id": "adu-renumbered-sb477",
+      "old": "65852.2",
+      "new_range": "66310-66342",
+      "title": "ADU law. SB 477 (Ch. 7, Stats. 2024): 'updated from 65852.2, 65852.22, 65852.23, and 65852.26 to Government Code sections 66310-66342' (Handbook p. 13)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
+      "confirmed": true
+    },
+    {
+      "id": "jadu-renumbered-sb477",
+      "old": "65852.22",
+      "new_range": "66310-66342",
+      "title": "JADU law, same SB 477 renumbering (Handbook p. 13). JADU provisions now sit in 66333-66339 (Handbook p. 16)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
+      "confirmed": true
+    },
+    {
+      "id": "sb477-renumbered-3",
+      "old": "65852.23",
+      "new_range": "66310-66342",
+      "title": "ADU/JADU law, same SB 477 renumbering (Handbook p. 13)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
+      "confirmed": true
+    },
+    {
+      "id": "sb477-renumbered-4",
+      "old": "65852.26",
+      "new_range": "66310-66342",
+      "title": "ADU/JADU law, same SB 477 renumbering (Handbook p. 13)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13",
+      "checked_date": "2026-11-07",
+      "confirmed": true
+    },
+    {
+      "id": "adu-impact-fees-renumbered-2025",
+      "old": "66324",
+      "new_range": "66311.5",
+      "title": "2025 renumbering (Handbook p. 14). 66311.5 covers ADU/JADU impact fees, e.g. no impact fee on an ADU of 750 sf or less (p. 15)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
+      "checked_date": "2026-11-07",
+      "confirmed": true
+    },
+    {
+      "id": "hcd-guidelines-renumbered-2025",
+      "old": "66327",
+      "new_range": "66313.5",
+      "title": "2025 renumbering (Handbook p. 14). 66313.5 covers HCD's authority to adopt guidelines for ADU and JADU standards (pp. 15, 30)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
+      "checked_date": "2026-11-07",
+      "confirmed": true
+    },
+    {
+      "id": "unpermitted-adu-renumbered-2025",
+      "old": "66332",
+      "new_range": "66311.7",
+      "title": "2025 renumbering (Handbook p. 14). 66311.7 covers permits for unpermitted ADUs (p. 12)",
+      "source_url": "https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14",
+      "checked_date": "2026-11-07",
+      "confirmed": true
+    }
+  ]
+}

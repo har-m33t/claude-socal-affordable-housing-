@@ -1,0 +1,30 @@
+{
+  "city": "<City name>",
+  "verified": false,
+  "checked_date": null,
+  "sources": [
+    {
+      "title": "<page or document title>",
+      "url": "<https://...>",
+      "checked_date": null
+    }
+  ],
+  "fast_paths": [
+    {
+      "id": "<kebab-case-id>",
+      "name": "<name the city uses>",
+      "rules": ["<eligibility rule, quoted or closely paraphrased from the source>"],
+      "source": "<url of the page the rules came from>"
+    }
+  ],
+  "checklist": [
+    {
+      "id": "<kebab-case-id, unique in this file>",
+      "text": "<item text as printed on the checklist>",
+      "page": 1,
+      "box": [0, 0, 0, 0],
+      "doc_type": "<document type key, or unknown>",
+      "source": "<url of the checklist PDF>"
+    }
+  ]
+}
