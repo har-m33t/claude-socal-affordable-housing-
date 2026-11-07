@@ -17,3 +17,9 @@ data/raw/*
 # Env / secrets
 .env
 .env.*
+
+# Hackathon bundle: contents of claude-impact-lab-uci-main.zip.
+# Unpacked locally for reference; the zip is the tracked copy, so every
+# extracted file stays untracked. Re-extract with:
+#   unzip -q claude-impact-lab-uci-main.zip -d .
+claude-impact-lab-uci-main/
