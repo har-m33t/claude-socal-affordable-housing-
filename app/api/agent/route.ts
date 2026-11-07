@@ -24,7 +24,8 @@ import { z } from "zod";
 // test runner does not resolve tsconfig paths.
 import { hasApiKey, recordingEnabled } from "../../../lib/agent/config";
 import { runAgent } from "../../../lib/agent/loop";
-import { clientKey, requestRateLimiter } from "../../../lib/agent/ratelimit";
+import { clientKey, rateLimitOptions, requestRateLimiter } from "../../../lib/agent/ratelimit";
+import { checkDurableLimit } from "../../../lib/agent/durable-limit";
 import { sseResponse } from "../../../lib/agent/sse";
 import type { AgentRunInput } from "../../../lib/agent/loop";
 
@@ -126,7 +127,13 @@ export async function POST(request: Request): Promise<Response> {
   // Only live runs spend tokens, so only live runs are rate limited. Two caps
   // are checked: the whole app's ceiling first, then this client's own.
   if (live) {
-    const decision = requestRateLimiter().check(clientKey(request.headers));
+    const who = clientKey(request.headers);
+    // Durable first: in-process counters are per serverless instance, so on
+    // Vercel the global cap is only real when it lives in Redis. A null means
+    // the backend is absent or unhealthy, and we fall back to the in-process
+    // limiter rather than either failing the run or removing the ceiling.
+    const durable = await checkDurableLimit(who, rateLimitOptions());
+    const decision = durable ?? requestRateLimiter().check(who);
     if (!decision.ok) {
       const seconds = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
       const atGlobalCeiling = decision.scope === "global";

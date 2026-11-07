@@ -163,6 +163,17 @@ export function clientKey(headers: Headers, trustProxy = trustProxyHeaders()): s
 let shared: RateLimiter | null = null;
 
 /** The process-wide limiter the route uses. Built on first use. */
+/**
+ * The caps the limiters share, read from the environment. Exported so the
+ * durable (Redis) limiter enforces exactly the same numbers as the in-process
+ * one it falls back to - two sources of truth would mean the ceiling silently
+ * changes depending on which backend answered.
+ */
+export function rateLimitOptions(): { max: number; globalMax: number; windowMs: number } {
+  const { max, globalMax, windowMs } = readRateLimit();
+  return { max, globalMax, windowMs };
+}
+
 export function requestRateLimiter(): RateLimiter {
   if (shared === null) {
     const { max, globalMax, windowMs } = readRateLimit();
