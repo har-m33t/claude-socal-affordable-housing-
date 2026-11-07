@@ -39,6 +39,14 @@ export const runtime = "nodejs";
  * and it only ever reaches the model inside the untrusted envelope in a user
  * turn, with `<` escaped.
  */
+/**
+ * Aggregate cap across ALL documents in one run. The per-document limit alone
+ * allowed 20 x 200,000 = 4,000,000 characters to be shipped to the model, and
+ * the rate limiter counts requests rather than bytes, so one allowed request
+ * could cost far more than the step and token caps suggest.
+ */
+const TOTAL_DOCUMENT_CHARS = 100_000;
+
 const DocumentSchema = z.strictObject({
   name: z.string().min(1).max(260),
   declared_type: z.string().min(1).max(120),
@@ -51,7 +59,14 @@ const BodySchema = z.strictObject({
   // discriminator and would be ambiguous on the wire.
   projectType: z.string().min(1).max(120),
   question: z.string().min(1).max(4_000),
-  documents: z.array(DocumentSchema).max(20).optional(),
+  documents: z
+    .array(DocumentSchema)
+    .max(20)
+    .refine(
+      (docs) => docs.reduce((n, d) => n + d.text.length, 0) <= TOTAL_DOCUMENT_CHARS,
+      { message: `documents exceed the combined ${TOTAL_DOCUMENT_CHARS} character budget for one run` },
+    )
+    .optional(),
   replay: z.boolean().optional(),
   // No `record` field. See the header comment: it is server-side only.
   // No `packet` field either: superseded by `documents` (issue #3). Both it

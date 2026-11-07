@@ -196,7 +196,12 @@ export interface AgentRunRequest {
   city: string;
   projectType: string;
   question: string;
-  packet?: PacketManifest;
+  /**
+   * Browser-redacted document text. Replaces the manifest-only `packet`:
+   * redaction happens client-side, so the server receives text that has
+   * already had names, addresses and APNs tokenized.
+   */
+  documents?: Array<{ name: string; declared_type: string; text: string }>;
   /** When true, stream fixtures/replay.json instead of calling the API. */
   replay?: boolean;
   /** When true, write a replay file for this run. */

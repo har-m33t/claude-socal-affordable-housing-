@@ -34,6 +34,14 @@ const foundUnconfirmed = statutes.find((entry) => entry.confirmed === false);
 if (!foundConfirmed || !foundUnconfirmed) {
   throw new Error("data/statutes.json must hold one confirmed and one unconfirmed entry for these tests");
 }
+/**
+ * The single key an entry answers to. resolveStatuteId is strict on purpose:
+ * an entry that declares an `id` no longer resolves by its `old` number, so a
+ * test must ask by the same key the data offers. Deriving it here keeps these
+ * tests valid when Team 1's slugged statutes.json lands.
+ */
+const keyOf = (e: StatuteEntry): string => e.id ?? e.old;
+
 const confirmedEntry: StatuteEntry = foundConfirmed;
 const unconfirmedEntry: StatuteEntry = foundUnconfirmed;
 
@@ -397,11 +405,12 @@ describe("loadStatuteTable", () => {
 
 describe("resolveStatuteId", () => {
   it("resolves a confirmed id and copies every field from the entry", () => {
-    const result = resolveStatuteId(confirmedEntry.old, statutes);
+    const result = resolveStatuteId(keyOf(confirmedEntry), statutes);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.statute).toEqual({
-      id: confirmedEntry.old,
+      // `id` is the key the caller asked by; every other field is the entry's.
+      id: keyOf(confirmedEntry),
       old: confirmedEntry.old,
       new_range: confirmedEntry.new_range,
       title: confirmedEntry.title,
@@ -415,16 +424,16 @@ describe("resolveStatuteId", () => {
   });
 
   it("trims the id and still hands back the entry's own bytes", () => {
-    const result = resolveStatuteId(`  ${confirmedEntry.old}  `, statutes);
+    const result = resolveStatuteId(`  ${keyOf(confirmedEntry)}  `, statutes);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.statute.id).toBe(confirmedEntry.old);
+    if (result.ok) expect(result.statute.id).toBe(keyOf(confirmedEntry));
   });
 
   it("rejects an unconfirmed entry and names the id", () => {
-    const result = resolveStatuteId(unconfirmedEntry.old, statutes);
+    const result = resolveStatuteId(keyOf(unconfirmedEntry), statutes);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toContain(unconfirmedEntry.old);
+    expect(result.reason).toContain(keyOf(unconfirmedEntry));
     expect(result.reason).toContain("unconfirmed");
   });
 
@@ -446,8 +455,8 @@ describe("resolveStatuteId", () => {
   it("does not partially or fuzzily match", () => {
     const prefix = confirmedEntry.old.slice(0, 3);
     expect(resolveStatuteId(prefix, statutes).ok).toBe(false);
-    expect(resolveStatuteId(`${confirmedEntry.old}x`, statutes).ok).toBe(false);
-    expect(resolveStatuteId(`${confirmedEntry.old} and also more text`, statutes).ok).toBe(false);
+    expect(resolveStatuteId(`${keyOf(confirmedEntry)}x`, statutes).ok).toBe(false);
+    expect(resolveStatuteId(`${keyOf(confirmedEntry)} and also more text`, statutes).ok).toBe(false);
   });
 
   it("matches the entry's id field when it has one, and not its old number", () => {
@@ -466,7 +475,7 @@ describe("resolveStatuteId", () => {
 
   it("rejects an ambiguous table rather than guessing", () => {
     const duplicated = [confirmedEntry, { ...confirmedEntry }];
-    const result = resolveStatuteId(confirmedEntry.old, duplicated);
+    const result = resolveStatuteId(keyOf(confirmedEntry), duplicated);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toContain("ambiguous");
   });
