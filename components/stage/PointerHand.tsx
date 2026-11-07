@@ -1,4 +1,5 @@
 "use client";
+import { useId } from "react";
 /**
  * The two pointing hands. They differ in shape, not just colour, so nobody has to
  * tell terracotta from blue:
@@ -73,10 +74,13 @@ function Shadow({ id }: { id: string }) {
 
 /** Plan hand: solid terracotta, white seams between the fingers. */
 function SolidHand() {
+  // Unique per instance: every document pane mounts a pointer layer, and a duplicated
+  // filter id resolves to the first copy, which may sit in a hidden pane and blank the hand.
+  const shadowId = `hand-shadow-${useId().replace(/:/g, "")}`;
   const seam = { fill: "var(--plan)", stroke: "var(--bg)", strokeWidth: 1.6, strokeLinejoin: "round" as const };
   return (
     <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
-      <g filter="url(#stage-hand-shadow-plan)">
+      <g filter={`url(#${shadowId})`}>
         <rect {...FINGER} {...seam} />
         {FOLDED.map((r, i) => (
           <rect key={i} {...r} {...seam} />
@@ -85,17 +89,18 @@ function SolidHand() {
         <path d={THUMB} {...seam} strokeLinecap="round" />
         <rect x="15" y="51" width="24" height="6.5" rx="2" fill="var(--bg)" stroke="var(--plan)" strokeWidth="1.6" />
       </g>
-      <Shadow id="stage-hand-shadow-plan" />
+      <Shadow id={shadowId} />
     </svg>
   );
 }
 
 /** Answer hand: white fill, blue outline, and a "?" badge off the top-right knuckle. */
 function OutlinedHand() {
+  const shadowId = `hand-shadow-${useId().replace(/:/g, "")}`;
   const line = { fill: "var(--bg)", stroke: "var(--answer)", strokeWidth: 2, strokeLinejoin: "round" as const };
   return (
     <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
-      <g filter="url(#stage-hand-shadow-answer)">
+      <g filter={`url(#${shadowId})`}>
         <rect {...FINGER} {...line} />
         {FOLDED.map((r, i) => (
           <rect key={i} {...r} {...line} />
@@ -108,7 +113,7 @@ function OutlinedHand() {
           ?
         </text>
       </g>
-      <Shadow id="stage-hand-shadow-answer" />
+      <Shadow id={shadowId} />
     </svg>
   );
 }

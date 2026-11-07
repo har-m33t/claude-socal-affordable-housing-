@@ -13,6 +13,8 @@ Polished write-ups live here. Suggested files as research progresses:
 - [`pointer-video-script.md`](pointer-video-script.md): Pointer's 30-second demo video script
 - [`pointer-security-contract.md`](pointer-security-contract.md): what Team 4's security tests expect from Teams 1, 2 and 3
 
+- [`pointer-ui-motion.md`](pointer-ui-motion.md): Pointer's motion library, cursor and font, and when each animation runs
+
 ## Agent documentation
 
 Process docs, not research write-ups:
