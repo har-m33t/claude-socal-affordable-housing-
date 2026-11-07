@@ -84,3 +84,10 @@ describe("verbatimQuote edge cases", () => {
     );
   });
 });
+
+describe("coverage is weighted by how distinctive each word is", () => {
+  it('"property tax" does not point at the form\'s "Property Owner" field', () => {
+    const r = answerLocally("property tax", ctx());
+    expect(r.kind).toBe("not_found");
+  });
+});

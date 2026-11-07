@@ -6,14 +6,28 @@
 // plan's documents don't cover gets not_found, and no answer pointer.
 import type { AnswerContext, AnswerProvider, AnswerResult, AnswerSource } from "@/components/pointer/answer";
 import { documentById, targetById, type Plan, type PlanTarget } from "@/components/pointer/plan";
-import { isDeictic, questionTokens, tokenize, verbatimQuote } from "./text";
+import { isDeictic, questionConcepts, tokenize, verbatimQuote } from "./text";
 
 /** Weight of a question word found in a target's label vs. in its verbatim text. */
 const LABEL_WEIGHT = 3;
 const TEXT_WEIGHT = 1;
-/** Minimum score, and minimum share of the question's words that must match. */
+/**
+ * Minimum score, and minimum share of the question's *information* that must match.
+ * Coverage is weighted by inverse document frequency over the plan's targets, so a
+ * distinctive word the documents never use ("tax") outweighs a common one they do
+ * ("property"): "property tax" is honestly not_found instead of pointing at "Property Owner".
+ */
 const MIN_SCORE = 3;
 const MIN_COVERAGE = 0.5;
+
+function inverseDocumentFrequency(plan: Plan): (w: string) => number {
+  const df = new Map<string, number>();
+  for (const t of plan.targets) {
+    for (const w of new Set([...tokenize(t.label), ...tokenize(t.text)])) df.set(w, (df.get(w) ?? 0) + 1);
+  }
+  const n = plan.targets.length;
+  return (w) => Math.log((n + 1) / ((df.get(w) ?? 0) + 1)) + 1;
+}
 
 interface Scored {
   target: PlanTarget;
@@ -21,23 +35,27 @@ interface Scored {
 }
 
 function scoreTargets(plan: Plan, question: string, currentTargetId?: string): Scored[] {
-  const q = questionTokens(question);
-  if (q.length === 0) return [];
+  const concepts = questionConcepts(question);
+  if (concepts.length === 0) return [];
   const currentStep = plan.steps.find((s) => currentTargetId && s.targets.includes(currentTargetId));
+  const idf = inverseDocumentFrequency(plan);
+  // A concept carries the information of its most common member (a synonym the documents use).
+  const conceptInfo = concepts.map((g) => Math.min(...g.map(idf)));
+  const information = conceptInfo.reduce((a, b) => a + b, 0);
   const scored: Scored[] = [];
   for (const target of plan.targets) {
     const label = new Set(tokenize(target.label));
     const text = new Set(tokenize(target.text));
     let score = 0;
-    let matched = 0;
-    for (const w of q) {
-      const inLabel = label.has(w);
-      const inText = text.has(w);
+    let covered = 0;
+    concepts.forEach((group, i) => {
+      const inLabel = group.some((w) => label.has(w));
+      const inText = group.some((w) => text.has(w));
       if (inLabel) score += LABEL_WEIGHT;
       if (inText) score += TEXT_WEIGHT;
-      if (inLabel || inText) matched++;
-    }
-    if (score < MIN_SCORE || matched / q.length < MIN_COVERAGE) continue;
+      if (inLabel || inText) covered += conceptInfo[i];
+    });
+    if (score < MIN_SCORE || covered / information < MIN_COVERAGE) continue;
     // Prefer the city's documents over the homeowner's made-up files, then the current step.
     if (documentById(plan, target.doc)?.made_up) score *= 0.8;
     if (currentStep?.targets.includes(target.id)) score += 0.5;

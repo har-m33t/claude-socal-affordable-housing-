@@ -69,16 +69,27 @@ export function tokenize(s: string): string[] {
 }
 
 /** Tokens of a question: phrases rewritten, stopwords dropped, synonyms added. Deduped. */
-export function questionTokens(q: string): string[] {
+/**
+ * The question as concepts: one group per meaningful word, holding its stem and its
+ * synonyms' stems ("sewage" → ["sewag", "sewer"]). A concept is covered when any member
+ * matches, so a synonym never counts against coverage.
+ */
+export function questionConcepts(q: string): string[][] {
   let s = normalize(q);
   for (const [re, to] of PHRASES) s = s.replace(re, to);
-  const out = new Set<string>();
+  const groups = new Map<string, Set<string>>();
   for (const w of s.split(" ")) {
     if (w.length <= 1 || STOPWORDS.has(w)) continue;
-    out.add(stem(w));
-    for (const syn of SYNONYMS[w] ?? []) out.add(stem(syn));
+    const key = stem(w);
+    const g = groups.get(key) ?? new Set([key]);
+    for (const syn of SYNONYMS[w] ?? []) g.add(stem(syn));
+    groups.set(key, g);
   }
-  return [...out];
+  return [...groups.values()].map((g) => [...g]);
+}
+
+export function questionTokens(q: string): string[] {
+  return [...new Set(questionConcepts(q).flat())];
 }
 
 /** "What is this step?", "why?", "explain this": questions about whatever the plan pointer is on. */
