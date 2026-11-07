@@ -14,12 +14,34 @@ data/raw/*
 # Office temp files
 ~$*
 
-# Env / secrets
+# Env / secrets (keys live in the environment only; .env.example lists names, no values)
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+
+# Never commit personal information (real applicants, tenants, residents)
+real-data/
+private/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
 
 # Hackathon bundle: contents of claude-impact-lab-uci-main.zip.
 # Unpacked locally for reference; the zip is the tracked copy, so every
 # extracted file stays untracked. Re-extract with:
 #   unzip -q claude-impact-lab-uci-main.zip -d .
 claude-impact-lab-uci-main/
+node_modules
