@@ -23,6 +23,15 @@ export const DEFAULT_MAX_STEPS = 12;
 export const DEFAULT_RATE_LIMIT_MAX = 5;
 export const DEFAULT_RATE_LIMIT_WINDOW_MS = 60_000;
 
+/**
+ * Live runs allowed across ALL clients combined, per window.
+ *
+ * This is the actual spend ceiling. The per-client cap is keyed on a header a
+ * caller controls, so on its own it can be reset by rotating that header; this
+ * counter cannot be reached from a request at all.
+ */
+export const DEFAULT_RATE_LIMIT_GLOBAL_MAX = 20;
+
 /** Effort lives inside `output_config`, not at the top level. */
 export const DEFAULT_EFFORT = "medium" as const;
 
@@ -30,7 +39,10 @@ export const DEFAULT_EFFORT = "medium" as const;
 export const REPLAY_PATH = "fixtures/replay.json";
 
 export interface RateLimitConfig {
+  /** Per-client cap. */
   max: number;
+  /** Cap across every client combined. */
+  globalMax: number;
   windowMs: number;
 }
 
@@ -41,6 +53,7 @@ export interface AgentConfig {
   /** Absolute or cwd-relative path to the handbook PDF, or null. */
   handbookPdfPath: string | null;
   rateLimit: RateLimitConfig;
+  trustProxy: boolean;
   recordingEnabled: boolean;
 }
 
@@ -83,12 +96,28 @@ export function readHandbookPdfPath(): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-/** Per-client cap on live runs, overridable for a demo or a load test. */
+/** Caps on live runs, overridable for a demo or a load test. */
 export function readRateLimit(): RateLimitConfig {
   return {
     max: positiveInt(process.env.POINTER_RATE_LIMIT_MAX, DEFAULT_RATE_LIMIT_MAX),
+    globalMax: positiveInt(
+      process.env.POINTER_RATE_LIMIT_GLOBAL_MAX,
+      DEFAULT_RATE_LIMIT_GLOBAL_MAX,
+    ),
     windowMs: positiveInt(process.env.POINTER_RATE_LIMIT_WINDOW_MS, DEFAULT_RATE_LIMIT_WINDOW_MS),
   };
+}
+
+/**
+ * Whether to believe x-forwarded-for / x-real-ip when identifying a client.
+ *
+ * Off by default, so the default configuration is the safe one: with no proxy
+ * in front of the app those headers are attacker-supplied and a caller could
+ * hand itself a fresh per-client allowance per request. Set it only when a
+ * trusted reverse proxy is actually setting them.
+ */
+export function trustProxyHeaders(): boolean {
+  return process.env.POINTER_TRUST_PROXY === "1";
 }
 
 /**
@@ -114,6 +143,7 @@ export function loadConfig(): AgentConfig {
     caps: readCaps(),
     handbookPdfPath: readHandbookPdfPath(),
     rateLimit: readRateLimit(),
+    trustProxy: trustProxyHeaders(),
     recordingEnabled: recordingEnabled(),
   };
 }

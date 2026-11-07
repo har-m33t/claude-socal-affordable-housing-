@@ -11,11 +11,18 @@ import * as nodePath from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "../../app/api/agent/route";
-import { readApiKey, readCaps, readRateLimit, recordingEnabled } from "../../lib/agent/config";
+import {
+  readApiKey,
+  readCaps,
+  readRateLimit,
+  recordingEnabled,
+  trustProxyHeaders,
+} from "../../lib/agent/config";
 import type { AgentRunDeps, AnthropicClientLike, ToolsLike, VerifierLike } from "../../lib/agent/loop";
 import { runAgent } from "../../lib/agent/loop";
 import { buildSystemBlocks, buildUserContent, UNTRUSTED_OPEN } from "../../lib/agent/prompt";
 import { clientKey, createRateLimiter, resetRateLimiter } from "../../lib/agent/ratelimit";
+// `trustProxyHeaders` is read through config so the env flag is the only switch.
 import { formatFrame, SSE_HEADERS, toSSEStream } from "../../lib/agent/sse";
 import type {
   AgentEvent,
@@ -176,6 +183,8 @@ afterEach(() => {
   delete process.env.POINTER_ALLOW_RECORD;
   delete process.env.POINTER_RATE_LIMIT_MAX;
   delete process.env.POINTER_RATE_LIMIT_WINDOW_MS;
+  delete process.env.POINTER_RATE_LIMIT_GLOBAL_MAX;
+  delete process.env.POINTER_TRUST_PROXY;
   resetRateLimiter();
   vi.unstubAllEnvs();
 });
@@ -757,6 +766,8 @@ describe("the API key", () => {
       "POINTER_ALLOW_RECORD",
       "POINTER_RATE_LIMIT_MAX",
       "POINTER_RATE_LIMIT_WINDOW_MS",
+      "POINTER_RATE_LIMIT_GLOBAL_MAX",
+      "POINTER_TRUST_PROXY",
       "NODE_ENV",
     ]);
     let keyReads = 0;
@@ -942,34 +953,57 @@ describe("recording is server-side only", () => {
 describe("the rate limiter", () => {
   it("allows up to max runs then refuses, with the time left in the window", () => {
     let clock = 1_000;
-    const limiter = createRateLimiter({ max: 3, windowMs: 60_000, now: () => clock });
+    // globalMax high enough to stay out of the way: this test is about the
+    // per-client cap.
+    const limiter = createRateLimiter({
+      max: 3,
+      globalMax: 1_000,
+      windowMs: 60_000,
+      now: () => clock,
+    });
 
-    expect(limiter.check("ip:a")).toEqual({ ok: true, remaining: 2, retryAfterMs: 0 });
+    const allowed = { ok: true, scope: "client" as const, retryAfterMs: 0 };
+    expect(limiter.check("ip:a")).toEqual({ ...allowed, remaining: 2 });
     clock += 500;
-    expect(limiter.check("ip:a")).toEqual({ ok: true, remaining: 1, retryAfterMs: 0 });
+    expect(limiter.check("ip:a")).toEqual({ ...allowed, remaining: 1 });
     clock += 500;
-    expect(limiter.check("ip:a")).toEqual({ ok: true, remaining: 0, retryAfterMs: 0 });
+    expect(limiter.check("ip:a")).toEqual({ ...allowed, remaining: 0 });
     clock += 500;
     // Window opened at t=1000 and closes at t=61000; the clock now reads 2500.
-    expect(limiter.check("ip:a")).toEqual({ ok: false, remaining: 0, retryAfterMs: 58_500 });
+    expect(limiter.check("ip:a")).toEqual({
+      ok: false,
+      scope: "client",
+      remaining: 0,
+      retryAfterMs: 58_500,
+    });
   });
 
   it("resets when the window elapses", () => {
     let clock = 0;
-    const limiter = createRateLimiter({ max: 1, windowMs: 1_000, now: () => clock });
+    const limiter = createRateLimiter({
+      max: 1,
+      globalMax: 1_000,
+      windowMs: 1_000,
+      now: () => clock,
+    });
 
     expect(limiter.check("ip:a").ok).toBe(true);
     expect(limiter.check("ip:a").ok).toBe(false);
     clock = 999;
     expect(limiter.check("ip:a").ok).toBe(false);
     clock = 1_000; // the window is closed at exactly resetAt
-    expect(limiter.check("ip:a")).toEqual({ ok: true, remaining: 0, retryAfterMs: 0 });
+    expect(limiter.check("ip:a")).toEqual({
+      ok: true,
+      scope: "client",
+      remaining: 0,
+      retryAfterMs: 0,
+    });
     clock = 1_500;
     expect(limiter.check("ip:a").ok).toBe(false);
   });
 
   it("keeps separate buckets per client", () => {
-    const limiter = createRateLimiter({ max: 1, windowMs: 60_000, now: () => 0 });
+    const limiter = createRateLimiter({ max: 1, globalMax: 1_000, windowMs: 60_000, now: () => 0 });
     expect(limiter.check("ip:a").ok).toBe(true);
     expect(limiter.check("ip:b").ok).toBe(true);
     expect(limiter.check("ip:a").ok).toBe(false);
@@ -977,24 +1011,27 @@ describe("the rate limiter", () => {
   });
 
   it("keys on x-forwarded-for, then x-real-ip, then one shared bucket", () => {
-    expect(clientKey(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" }))).toBe(
+    // Only when a proxy is explicitly trusted.
+    expect(clientKey(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" }), true)).toBe(
       "ip:203.0.113.7",
     );
-    expect(clientKey(new Headers({ "x-real-ip": "203.0.113.9" }))).toBe("ip:203.0.113.9");
+    expect(clientKey(new Headers({ "x-real-ip": "203.0.113.9" }), true)).toBe("ip:203.0.113.9");
     expect(
-      clientKey(new Headers({ "x-forwarded-for": "  ", "x-real-ip": "203.0.113.9" })),
+      clientKey(new Headers({ "x-forwarded-for": "  ", "x-real-ip": "203.0.113.9" }), true),
     ).toBe("ip:203.0.113.9");
     // No proxy headers: one shared bucket, not an unlimited allowance each.
-    expect(clientKey(new Headers())).toBe("shared");
+    expect(clientKey(new Headers(), true)).toBe("shared");
   });
 
-  it("defaults to 5 live runs per 60s and honours the env overrides", () => {
-    expect(readRateLimit()).toEqual({ max: 5, windowMs: 60_000 });
+  it("defaults to 5 per client and 20 globally per 60s, and honours the overrides", () => {
+    expect(readRateLimit()).toEqual({ max: 5, globalMax: 20, windowMs: 60_000 });
     process.env.POINTER_RATE_LIMIT_MAX = "2";
+    process.env.POINTER_RATE_LIMIT_GLOBAL_MAX = "7";
     process.env.POINTER_RATE_LIMIT_WINDOW_MS = "5000";
-    expect(readRateLimit()).toEqual({ max: 2, windowMs: 5_000 });
+    expect(readRateLimit()).toEqual({ max: 2, globalMax: 7, windowMs: 5_000 });
     process.env.POINTER_RATE_LIMIT_MAX = "junk";
-    expect(readRateLimit()).toEqual({ max: 5, windowMs: 5_000 });
+    process.env.POINTER_RATE_LIMIT_GLOBAL_MAX = "-3";
+    expect(readRateLimit()).toEqual({ max: 5, globalMax: 20, windowMs: 5_000 });
   });
 });
 
@@ -1024,7 +1061,11 @@ describe("the route's rate limit", () => {
     expect(body.message).toContain("replay");
   });
 
-  it("limits each client separately", async () => {
+  it("limits each client separately when a proxy is trusted", async () => {
+    // Proxy headers are ignored unless POINTER_TRUST_PROXY=1, so per-client
+    // keying only exists in that configuration.
+    process.env.POINTER_TRUST_PROXY = "1";
+    resetRateLimiter();
     expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(200);
     expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(200);
     expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(429);
@@ -1053,5 +1094,221 @@ describe("the route's rate limit", () => {
     const res = await post(live, headers);
     expect(res.status).toBe(503);
     expect(((await res.json()) as { error: string }).error).toBe("no_api_key");
+  });
+});
+
+// ======================================================== the global ceiling
+
+describe("the global rate limit", () => {
+  it("refuses a client who is still under its own per-client limit", () => {
+    const limiter = createRateLimiter({ max: 10, globalMax: 2, windowMs: 60_000, now: () => 0 });
+
+    expect(limiter.check("ip:a")).toMatchObject({ ok: true, scope: "client", remaining: 9 });
+    expect(limiter.check("ip:a")).toMatchObject({ ok: true, scope: "client", remaining: 8 });
+    // 8 of its own allowance left, but the app is at its ceiling.
+    expect(limiter.check("ip:a")).toEqual({
+      ok: false,
+      scope: "global",
+      remaining: 0,
+      retryAfterMs: 60_000,
+    });
+  });
+
+  it("still hits the ceiling when x-forwarded-for is rotated across many keys", () => {
+    // The regression test that matters: rotating the client key must not buy
+    // more runs. Each request looks like a brand new client.
+    const limiter = createRateLimiter({ max: 5, globalMax: 3, windowMs: 60_000, now: () => 0 });
+
+    for (let i = 0; i < 3; i += 1) {
+      expect(limiter.check(clientKey(new Headers({ "x-forwarded-for": `198.51.100.${i}` }), true)))
+        .toMatchObject({ ok: true });
+    }
+    for (let i = 3; i < 40; i += 1) {
+      const key = clientKey(new Headers({ "x-forwarded-for": `198.51.100.${i}` }), true);
+      expect(limiter.check(key), `rotation ${i}`).toMatchObject({ ok: false, scope: "global" });
+    }
+  });
+
+  it("is not reachable through the keyed map, even once it is swept clear", () => {
+    let clock = 0;
+    const limiter = createRateLimiter({
+      max: 1,
+      globalMax: 2,
+      windowMs: 60_000,
+      now: () => clock,
+    });
+    expect(limiter.check("ip:a").ok).toBe(true);
+    expect(limiter.check("ip:b").ok).toBe(true);
+    // Both per-client windows are spent AND the global ceiling is reached.
+    // A fresh key gets the global refusal, not a fresh allowance.
+    expect(limiter.check("ip:c")).toMatchObject({ ok: false, scope: "global" });
+    clock = 59_999;
+    expect(limiter.check("ip:d")).toMatchObject({ ok: false, scope: "global" });
+  });
+
+  it("does not consume per-client allowance when it refuses", () => {
+    let clock = 0;
+    const limiter = createRateLimiter({
+      max: 2,
+      globalMax: 1,
+      windowMs: 1_000,
+      now: () => clock,
+    });
+    // One run by someone else exhausts the global window.
+    expect(limiter.check("ip:other").ok).toBe(true);
+    // ip:a is refused globally, three times, spending nothing of its own.
+    for (let i = 0; i < 3; i += 1) {
+      expect(limiter.check("ip:a")).toMatchObject({ ok: false, scope: "global" });
+    }
+    // New global window. ip:a's first run reports 1 of 2 left, which is only
+    // true if none of the three refusals above was counted against it.
+    clock = 1_000;
+    expect(limiter.check("ip:a")).toMatchObject({ ok: true, scope: "client", remaining: 1 });
+  });
+
+  it("does not consume global allowance when the per-client cap refuses", () => {
+    let clock = 0;
+    const limiter = createRateLimiter({
+      max: 1,
+      globalMax: 3,
+      windowMs: 1_000,
+      now: () => clock,
+    });
+    expect(limiter.check("ip:a").ok).toBe(true);
+    // Five refusals for ip:a must not eat into the global budget.
+    for (let i = 0; i < 5; i += 1) {
+      expect(limiter.check("ip:a")).toMatchObject({ ok: false, scope: "client" });
+    }
+    expect(limiter.check("ip:b").ok).toBe(true);
+    expect(limiter.check("ip:c").ok).toBe(true);
+    expect(limiter.check("ip:d")).toMatchObject({ ok: false, scope: "global" });
+  });
+
+  it("resets its window independently of any client window", () => {
+    let clock = 0;
+    const limiter = createRateLimiter({
+      max: 1,
+      globalMax: 2,
+      windowMs: 1_000,
+      now: () => clock,
+    });
+    // Global window opens at t=0 and closes at t=1000.
+    expect(limiter.check("ip:a").ok).toBe(true);
+    clock = 600; // ip:b's own window opens here, closing at t=1600
+    expect(limiter.check("ip:b").ok).toBe(true);
+    expect(limiter.check("ip:c")).toMatchObject({ ok: false, scope: "global" });
+
+    clock = 1_000; // global window reset; ip:b's own window is still open
+    expect(limiter.check("ip:c").ok).toBe(true);
+    expect(limiter.check("ip:b")).toMatchObject({ ok: false, scope: "client" });
+  });
+
+  it("reset() clears the global counter too", () => {
+    const limiter = createRateLimiter({ max: 5, globalMax: 1, windowMs: 60_000, now: () => 0 });
+    expect(limiter.check("ip:a").ok).toBe(true);
+    expect(limiter.check("ip:b")).toMatchObject({ ok: false, scope: "global" });
+    limiter.reset();
+    expect(limiter.check("ip:b").ok).toBe(true);
+  });
+});
+
+describe("POINTER_TRUST_PROXY", () => {
+  it("is off by default, so proxy headers are ignored and everyone shares a bucket", () => {
+    expect(trustProxyHeaders()).toBe(false);
+    expect(clientKey(new Headers({ "x-forwarded-for": "203.0.113.7" }))).toBe("shared");
+    expect(clientKey(new Headers({ "x-real-ip": "203.0.113.8" }))).toBe("shared");
+    expect(clientKey(new Headers())).toBe("shared");
+  });
+
+  it("restores the header precedence when set to 1", () => {
+    process.env.POINTER_TRUST_PROXY = "1";
+    expect(trustProxyHeaders()).toBe(true);
+    expect(clientKey(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" }))).toBe(
+      "ip:203.0.113.7",
+    );
+    expect(clientKey(new Headers({ "x-real-ip": "203.0.113.8" }))).toBe("ip:203.0.113.8");
+    expect(clientKey(new Headers())).toBe("shared");
+  });
+
+  it("treats only the exact string 1 as enabled", () => {
+    for (const value of ["true", "yes", "0", "", "TRUE", "1 ", "01"]) {
+      process.env.POINTER_TRUST_PROXY = value;
+      expect(trustProxyHeaders(), `value: ${JSON.stringify(value)}`).toBe(false);
+      expect(clientKey(new Headers({ "x-forwarded-for": "203.0.113.7" }))).toBe("shared");
+    }
+  });
+});
+
+describe("the route's global rate limit", () => {
+  const live = { city: "fixture-city", projectType: "adu", question: "q" };
+
+  beforeEach(() => {
+    process.env.POINTER_TRUST_PROXY = "1";
+    process.env.POINTER_RATE_LIMIT_MAX = "5";
+    process.env.POINTER_RATE_LIMIT_GLOBAL_MAX = "2";
+    resetRateLimiter();
+  });
+
+  it("answers 429 rate_limited_global once the app ceiling is reached", async () => {
+    expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(200);
+    expect((await post(live, { "x-forwarded-for": "198.51.100.2" })).status).toBe(200);
+
+    const refused = await post(live, { "x-forwarded-for": "198.51.100.3" });
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get("Retry-After")).toBe("60");
+    const body = (await refused.json()) as {
+      error: string;
+      message: string;
+      retry_after_ms: number;
+    };
+    expect(body.error).toBe("rate_limited_global");
+    expect(body.message).toContain("across all callers");
+    expect(body.retry_after_ms).toBeGreaterThan(0);
+  });
+
+  it("cannot be bypassed by rotating x-forwarded-for", async () => {
+    expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(200);
+    expect((await post(live, { "x-forwarded-for": "198.51.100.2" })).status).toBe(200);
+    for (let i = 3; i < 15; i += 1) {
+      const res = await post(live, { "x-forwarded-for": `198.51.100.${i}` });
+      expect(res.status, `rotation ${i}`).toBe(429);
+      expect(((await res.json()) as { error: string }).error).toBe("rate_limited_global");
+    }
+  });
+
+  it("exempts replay runs from the global cap as well", async () => {
+    const replay = { ...live, replay: true };
+    for (let i = 0; i < 12; i += 1) {
+      expect((await post(replay, { "x-forwarded-for": `198.51.100.${i}` })).status).toBe(200);
+    }
+    // The global allowance was never touched.
+    expect((await post(live, { "x-forwarded-for": "198.51.100.50" })).status).toBe(200);
+    expect((await post(live, { "x-forwarded-for": "198.51.100.51" })).status).toBe(200);
+    expect((await post(live, { "x-forwarded-for": "198.51.100.52" })).status).toBe(429);
+  });
+
+  it("distinguishes one noisy client from the whole app at its ceiling", async () => {
+    process.env.POINTER_RATE_LIMIT_MAX = "1";
+    process.env.POINTER_RATE_LIMIT_GLOBAL_MAX = "10";
+    resetRateLimiter();
+
+    expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(200);
+    const noisy = await post(live, { "x-forwarded-for": "198.51.100.1" });
+    expect(noisy.status).toBe(429);
+    expect(((await noisy.json()) as { error: string }).error).toBe("rate_limited");
+  });
+
+  it("shares one bucket across callers when no proxy is trusted", async () => {
+    delete process.env.POINTER_TRUST_PROXY;
+    process.env.POINTER_RATE_LIMIT_MAX = "2";
+    process.env.POINTER_RATE_LIMIT_GLOBAL_MAX = "99";
+    resetRateLimiter();
+
+    expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(200);
+    expect((await post(live, { "x-forwarded-for": "198.51.100.2" })).status).toBe(200);
+    // A third, "different" client gets the shared bucket's refusal.
+    const refused = await post(live, { "x-forwarded-for": "198.51.100.3" });
+    expect(refused.status).toBe(429);
+    expect(((await refused.json()) as { error: string }).error).toBe("rate_limited");
   });
 });
