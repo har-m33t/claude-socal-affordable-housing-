@@ -1,0 +1,398 @@
+/* Pointer motion library. Documented in docs/pointer-ui-motion.md.
+   Timing and easing come from tokens.css (--dur-*, --ease-*). Class names are a
+   contract other lanes code against: add new ones, never rename.
+   Every animation is removed or made static under prefers-reduced-motion (bottom of file).
+
+   Entrance classes accept an optional delay for staggering lists:
+     <li class="anim-fade-up" style={{ "--anim-delay": `${i * 40}ms` }}> */
+
+/* Gemini's signature blue -> violet -> rose, toned down for a light Primer surface.
+   Decorative only: never the sole carrier of meaning, never body-text colour. */
+:root {
+  --gemini-blue: #4b7bec;
+  --gemini-violet: #9168c0;
+  --gemini-rose: #d6627a;
+  --gemini-gradient: linear-gradient(90deg, var(--gemini-blue), var(--gemini-violet), var(--gemini-rose));
+}
+
+/* ---------- entrances ---------- */
+
+/* Cards, chat messages, log rows: fade in while rising 6px. */
+.anim-fade-up {
+  animation: kf-fade-up var(--dur-base) var(--ease-out) var(--anim-delay, 0ms) both;
+}
+@keyframes kf-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Badges, the pointer arriving: spring scale-in from 0.92 (slight overshoot). */
+.anim-pop {
+  animation: kf-pop var(--dur-slow) var(--ease-spring) var(--anim-delay, 0ms) both;
+}
+@keyframes kf-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+/* Panels and drawers: slide in from 12px to the right. */
+.anim-slide-in-right {
+  animation: kf-slide-in-right var(--dur-slow) var(--ease-out) var(--anim-delay, 0ms) both;
+}
+@keyframes kf-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+/* ---------- Gemini shimmer ("thinking" placeholders) ---------- */
+
+/* Block skeleton: a soft tinted band sweeps across a grey bar. Give it a size. */
+.anim-shimmer {
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(
+        100deg,
+        transparent 30%,
+        color-mix(in oklab, var(--gemini-blue) 14%, transparent) 42%,
+        color-mix(in oklab, var(--gemini-violet) 16%, transparent) 50%,
+        color-mix(in oklab, var(--gemini-rose) 12%, transparent) 58%,
+        transparent 70%
+      )
+      0 0 / 250% 100% no-repeat,
+    var(--bg-muted);
+  animation: kf-shimmer 1.8s var(--ease-in-out) infinite;
+}
+/* Text: the words stay readable (muted grey) while a coloured band runs through them. */
+.anim-shimmer-text {
+  color: transparent;
+  background: linear-gradient(
+      100deg,
+      var(--fg-muted) 35%,
+      var(--gemini-blue) 45%,
+      var(--gemini-violet) 50%,
+      var(--gemini-rose) 55%,
+      var(--fg-muted) 65%
+    )
+    0 0 / 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: kf-shimmer 2.2s linear infinite;
+}
+@keyframes kf-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+/* ---------- Gemini input glow ---------- */
+
+/* Animated gradient ring around an input wrapper. Add the class while the input is
+   active (focused / agent working); set data-active="false" to fade it out in place. */
+@property --gemini-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.gemini-border {
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--radius-lg);
+}
+.gemini-border::before,
+.gemini-border::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--gemini-angle),
+    var(--gemini-blue),
+    var(--gemini-violet),
+    var(--gemini-rose),
+    var(--gemini-violet),
+    var(--gemini-blue)
+  );
+  animation: kf-gemini-spin 4s linear infinite;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+/* the 1.5px ring */
+.gemini-border::before {
+  inset: -1.5px;
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  z-index: 1;
+}
+/* the soft outer glow */
+.gemini-border::after {
+  inset: -3px;
+  filter: blur(10px);
+  opacity: 0.35;
+  z-index: -1;
+}
+.gemini-border[data-active="false"]::before,
+.gemini-border[data-active="false"]::after {
+  opacity: 0;
+}
+@keyframes kf-gemini-spin {
+  to {
+    --gemini-angle: 360deg;
+  }
+}
+
+/* ---------- pulse ring ---------- */
+
+/* Expanding ring, e.g. the plan pointer pulsing "same spot". Colour = currentColor,
+   so set `color: var(--plan)` (or text-[var(--plan)]) on the element. */
+.anim-pulse-ring {
+  position: relative;
+}
+.anim-pulse-ring::before,
+.anim-pulse-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  pointer-events: none;
+  opacity: 0;
+  animation: kf-pulse-ring 1.6s var(--ease-out) infinite;
+}
+.anim-pulse-ring::after {
+  animation-delay: 0.8s;
+}
+@keyframes kf-pulse-ring {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+/* ---------- sparkle ---------- */
+
+/* Gemini's 4-point star twinkle. Put it on any icon; or leave the element empty
+   (<span class="anim-sparkle" aria-hidden />) and it draws a gradient star itself. */
+.anim-sparkle {
+  display: inline-block;
+  transform-origin: center;
+  animation: kf-sparkle 2.4s var(--ease-in-out) infinite;
+}
+.anim-sparkle:empty {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  background: linear-gradient(135deg, var(--gemini-blue), var(--gemini-violet) 55%, var(--gemini-rose));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 0C12.6 6.4 17.6 11.4 24 12 17.6 12.6 12.6 17.6 12 24 11.4 17.6 6.4 12.6 0 12 6.4 11.4 11.4 6.4 12 0Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 0C12.6 6.4 17.6 11.4 24 12 17.6 12.6 12.6 17.6 12 24 11.4 17.6 6.4 12.6 0 12 6.4 11.4 11.4 6.4 12 0Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+@keyframes kf-sparkle {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(0.85) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08) rotate(45deg);
+  }
+}
+
+/* ---------- typing indicator ---------- */
+
+/* <span class="anim-typing" role="status" aria-label="Thinking"><span/><span/><span/></span> */
+.anim-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 1em;
+}
+.anim-typing > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  animation: kf-typing 1.2s var(--ease-in-out) infinite;
+}
+.anim-typing > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.anim-typing > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes kf-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* ---------- collapse ---------- */
+
+/* Height + opacity transition for collapsible sections, no measuring in JS.
+   Exactly one child. Closed content is also hidden from assistive tech (visibility).
+   <div class="anim-collapse" data-open={open}><div>…content…</div></div> */
+.anim-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--dur-slow) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out),
+    visibility 0s linear var(--dur-slow);
+}
+.anim-collapse > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.anim-collapse[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows var(--dur-slow) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out),
+    visibility 0s;
+}
+
+/* ---------- underline tabs (GitHub UnderlineNav) ---------- */
+
+/* Each tab grows its own 2px bar when data-active="true". For a bar that slides
+   between tabs, wrap them in .underline-tabs, add one .underline-tabs-indicator and
+   set --indicator-x / --indicator-w on the wrapper from the active tab's offsetLeft/offsetWidth. */
+.underline-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 10px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 20px;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.underline-tab:hover {
+  background: color-mix(in oklab, var(--fg) 7%, transparent);
+}
+.underline-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+.underline-tab::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 6px;
+  background: var(--underline-color, var(--plan));
+  transform: scaleX(0);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.underline-tab[data-active="true"] {
+  font-weight: 600;
+}
+.underline-tab[data-active="true"]::after {
+  transform: scaleX(1);
+}
+.underline-tabs {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+.underline-tabs:has(.underline-tabs-indicator) .underline-tab::after {
+  display: none;
+}
+.underline-tabs-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: var(--indicator-w, 0);
+  border-radius: 6px;
+  background: var(--underline-color, var(--plan));
+  transform: translateX(var(--indicator-x, 0));
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    width var(--dur-base) var(--ease-out);
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-up,
+  .anim-pop,
+  .anim-slide-in-right,
+  .anim-sparkle {
+    animation: none;
+  }
+  /* static skeleton / static muted text */
+  .anim-shimmer {
+    animation: none;
+    background: var(--bg-muted);
+  }
+  .anim-shimmer-text {
+    animation: none;
+    background: none;
+    color: var(--fg-muted);
+  }
+  /* ring stays, stops spinning */
+  .gemini-border::before,
+  .gemini-border::after {
+    animation: none;
+    transition: none;
+  }
+  /* one still ring instead of an expanding pulse */
+  .anim-pulse-ring::before {
+    animation: none;
+    opacity: 0.5;
+    transform: scale(1.35);
+  }
+  .anim-pulse-ring::after {
+    animation: none;
+    display: none;
+  }
+  .anim-typing > span {
+    animation: none;
+  }
+  .anim-typing > span:nth-child(2) {
+    opacity: 0.6;
+  }
+  .anim-typing > span:nth-child(3) {
+    opacity: 0.85;
+  }
+  .anim-collapse,
+  .anim-collapse[data-open="true"],
+  .underline-tab,
+  .underline-tab::after,
+  .underline-tabs-indicator {
+    transition: none;
+  }
+}
