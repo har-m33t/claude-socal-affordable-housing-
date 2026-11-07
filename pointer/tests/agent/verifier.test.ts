@@ -287,6 +287,153 @@ describe("looksLikeLawClaim", () => {
   });
 });
 
+// ------------------------------------------------- obfuscation + backing
+
+/**
+ * Regression tests for two detector bypasses.
+ *
+ * Untrusted city PDFs and uploaded packets are in this product's threat model,
+ * so "the model would have to emit that" is not a defense: a planted
+ * instruction can induce any output shape. Both groups below pass through the
+ * verifier unnoticed on the pre-fix code.
+ *
+ * No statute number is typed in here. Each obfuscated string is built from the
+ * real numbers in data/statutes.json by remapping their ASCII digits.
+ */
+
+const FULLWIDTH_ZERO = 0xff10;
+const ARABIC_INDIC_ZERO = 0x0660;
+const ZERO_WIDTH_SPACE = "​";
+
+/** Remap ASCII digits onto another Unicode decimal-digit block. */
+function remapDigits(text: string, zeroCodePoint: number): string {
+  return text.replace(/[0-9]/g, (digit) => String.fromCodePoint(zeroCodePoint + Number(digit)));
+}
+
+/** Split every character of a number with a zero-width space. */
+function splitWithZeroWidth(text: string): string {
+  return Array.from(text).join(ZERO_WIDTH_SPACE);
+}
+
+describe("obfuscated law claims (finding 1: unicode and zero-width evasion)", () => {
+  it("detects and drops a statute written in fullwidth digits", () => {
+    const disguised = remapDigits(unconfirmedEntry.old, FULLWIDTH_ZERO);
+    expect(disguised).not.toBe(unconfirmedEntry.old);
+
+    const text = `Gov Code ${disguised} is the rule that applies to your junior unit.`;
+    expect(looksLikeLawClaim(text)).toBe(true);
+
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    // Normalization folds the fullwidth digits to ASCII, so the number is
+    // resolved for real and rejected for the right reason.
+    expect(reason).toContain(unconfirmedEntry.old);
+    expect(reason).toContain("unconfirmed");
+  });
+
+  it("detects and drops a statute split by zero-width spaces", () => {
+    const disguised = splitWithZeroWidth(unconfirmedEntry.old);
+    expect(disguised).not.toBe(unconfirmedEntry.old);
+
+    const text = `Gov Code ${disguised} is the rule that applies to your junior unit.`;
+    expect(looksLikeLawClaim(text)).toBe(true);
+
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain(unconfirmedEntry.old);
+    expect(reason).toContain("unconfirmed");
+  });
+
+  it("detects and drops a statute written in Arabic-Indic digits", () => {
+    const disguised = remapDigits(unconfirmedEntry.old, ARABIC_INDIC_ZERO);
+    expect(disguised).not.toBe(unconfirmedEntry.old);
+
+    const text = `Gov Code ${disguised} is the rule that applies to your junior unit.`;
+    expect(looksLikeLawClaim(text)).toBe(true);
+
+    // NFKC does NOT fold these to ASCII, so there is no number to look up.
+    // Unresolvable means unbacked, so the claim drops rather than passing.
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain("not written in ASCII digits");
+    expect(reason).toContain("no citation");
+  });
+
+  it("detects and drops a bare statute number written in fullwidth digits", () => {
+    const text = remapDigits(unconfirmedEntry.old, FULLWIDTH_ZERO);
+    expect(looksLikeLawClaim(text)).toBe(true);
+    expect(verifyEvent(event({ text }), statutes).ok).toBe(false);
+  });
+
+  it("detects a law-asserting phrase broken by a zero-width space", () => {
+    const text = `This qualifies for ministeri${ZERO_WIDTH_SPACE}al approval.`;
+    expect(looksLikeLawClaim(text)).toBe(true);
+    expect(verifyEvent(event({ text }), statutes).ok).toBe(false);
+  });
+
+  it("detects a number split by a thin space", () => {
+    const disguised = unconfirmedEntry.old.replace(".", " .");
+    const text = `Gov Code ${disguised} applies here.`;
+    expect(looksLikeLawClaim(text)).toBe(true);
+  });
+
+  it("normalizes only to decide, and hands back the original text untouched", () => {
+    const disguised = remapDigits(confirmedEntry.old, FULLWIDTH_ZERO);
+    const claim = event({ text: `The handout still cites ${disguised}; that number was renumbered.` });
+
+    const result = verifyEvent(claim, statutes);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      // Same object, same characters: the fullwidth digits survive to the UI.
+      expect(result.event).toBe(claim);
+      expect(result.event.text).toContain(disguised);
+    }
+  });
+
+  it("still ignores plain prose after normalization", () => {
+    expect(looksLikeLawClaim("Upload the site plan and the floor plan as two separate PDFs.")).toBe(false);
+  });
+});
+
+describe("partial backing (finding 2: one backed reference must not carry the rest)", () => {
+  /** The low end of the confirmed entry's new range, read out of the data file. */
+  const confirmedNewSection = confirmedEntry.new_range.split("-")[0] as string;
+
+  it("drops a claim that pairs a confirmed statute with an unbacked bill reference", () => {
+    const text = `Gov Code ${confirmedNewSection} and SB 9 both require the city to approve this.`;
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain("SB 9");
+    expect(reason).toContain("statute map cannot back");
+    expect(reason).toContain("no citation");
+  });
+
+  it("drops the same claim with the bill named first", () => {
+    const text = `SB 9 and Gov Code ${confirmedNewSection} both require the city to approve this.`;
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain("SB 9");
+  });
+
+  it("drops a claim pairing a confirmed statute with an unresolvable obfuscated number", () => {
+    const disguised = remapDigits(unconfirmedEntry.old, ARABIC_INDIC_ZERO);
+    const text = `Gov Code ${confirmedNewSection} and ${disguised} both require ministerial approval.`;
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain("not written in ASCII digits");
+  });
+
+  it("names the first unbacked reference in reading order", () => {
+    const text = `State law requires ministerial approval under ${unconfirmedEntry.old}, and SB 9 helps too.`;
+    const reason = reasonOf(verifyEvent(event({ text }), statutes));
+    expect(reason).toContain(unconfirmedEntry.old);
+  });
+
+  it("lets a citation back a bill reference, since the statute map never can", () => {
+    const claim = event({ text: "SB 9 lets you split the lot.", citation: goodCitation });
+    expect(verifyEvent(claim, statutes).ok).toBe(true);
+  });
+
+  it("still passes a claim whose every reference is a confirmed statute", () => {
+    const text = `Gov Code ${confirmedNewSection} and ${confirmedEntry.old} are the same rule, renumbered.`;
+    expect(verifyEvent(event({ text }), statutes).ok).toBe(true);
+  });
+});
+
 // ------------------------------------------------------ recorder + replay
 
 describe("recorder and replay", () => {
