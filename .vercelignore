@@ -1,12 +1,14 @@
-# Nothing here is needed to build or serve the app, and some of it is large.
-claude-impact-lab-uci-main.zip
-claude-impact-lab-uci-main/
-research/
-scripts/
-docs/
-tests/
-data/raw/
-data/tools/
-*.md
-!README.md
-.github/
+# Patterns are gitignore-style: an UNANCHORED pattern like `docs/` matches at
+# every level, which previously also excluded public/data/docs/ and 404'd the
+# checklist PDF. Every rule here is anchored with a leading slash on purpose.
+/claude-impact-lab-uci-main.zip
+/claude-impact-lab-uci-main/
+/research/
+/scripts/
+/docs/
+/tests/
+/data/raw/
+/data/tools/
+/.github/
+/AGENTS.md
+/CONTRIBUTING.md
