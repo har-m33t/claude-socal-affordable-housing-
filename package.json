@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:security": "vitest run tests/security",
     "test:live": "POINTER_LIVE_TESTS=1 vitest run tests/security/injection.test.ts",
-    "scan:secrets": "gitleaks git --redact --verbose ."
+    "scan:secrets": "gitleaks git --redact --verbose --log-opts=--all ."
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.6.0",

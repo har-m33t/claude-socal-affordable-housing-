@@ -10,6 +10,7 @@ Polished write-ups live here. Suggested files as research progresses:
 ## Project plans
 
 - [`pointer-adu-copilot-build-plan.md`](pointer-adu-copilot-build-plan.md): Pointer, an ADU permit copilot for Anaheim — positioning, scope, build, security layer, and the four-team split
+- [`pointer-video-script.md`](pointer-video-script.md): Pointer's 30-second demo video script
 
 ## Agent documentation
 
