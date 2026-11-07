@@ -1,0 +1,132 @@
+// PROVISIONAL types, written by the UI lane (Team 2) from the shapes in
+// docs/pointer-adu-copilot-build-plan.md, because contracts/*.schema.json had not
+// landed on origin/main at 12:00. When contracts/ lands, check these against it and
+// change this file only. Every component imports its types from here.
+
+export const TOOLS = ["point_to", "highlight", "mark_item", "draft_field", "add_note"] as const;
+export type Tool = (typeof TOOLS)[number];
+
+export const STATUSES = ["complete", "missing", "unknown"] as const;
+export type ItemStatus = (typeof STATUSES)[number];
+
+/** A citation as sent by the agent. The plan doesn't fix the shape, so accept a bare URL too. */
+export type RawCitation =
+  | string
+  | { title?: string; label?: string; url: string; checked_date?: string; quote?: string };
+
+export interface Citation {
+  title: string;
+  url: string;
+  checked_date?: string;
+  quote?: string;
+}
+
+/** contracts/event.schema.json: one agent action `{tool, item_id, status?, text?, citation?, ts}`. */
+export interface AgentEvent {
+  tool: Tool;
+  item_id: string;
+  status?: ItemStatus;
+  text?: string;
+  citation?: RawCitation;
+  ts: string;
+}
+
+export interface Source {
+  title: string;
+  url: string;
+  checked_date?: string;
+}
+
+/** contracts/city.schema.json, checklist entry. ASSUMPTION: box = [x, y, w, h] in PDF points, top-left origin. */
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  page: number;
+  box: [number, number, number, number];
+  doc_type: string;
+  source: Source | string;
+}
+
+export interface FastPath {
+  id: string;
+  name: string;
+  rules: string[];
+  source: Source | string;
+}
+
+export interface CityConfig {
+  city: string;
+  verified: boolean;
+  checked_date: string | null;
+  /** NOT in the plan's schema: where the checklist PDF is served from. Proposed addition. */
+  checklist_pdf?: string;
+  sources: (Source | string)[];
+  fast_paths: FastPath[];
+  checklist: ChecklistItem[];
+}
+
+export interface ProjectType {
+  type: string;
+  name: string;
+  verified: boolean;
+  note?: string;
+}
+
+export type CoverageStatus = "live" | "checklist_found" | "not_checked";
+
+export interface CoverageRow {
+  city: string;
+  status: CoverageStatus;
+  verified: boolean;
+  checked_date: string | null;
+  checklist_url: string | null;
+}
+
+export interface PacketFile {
+  name: string;
+  declared_type: string;
+}
+
+export function normalizeCitation(c: RawCitation | undefined): Citation | undefined {
+  if (!c) return undefined;
+  if (typeof c === "string") return { title: hostOf(c), url: c };
+  return { title: c.title ?? c.label ?? hostOf(c.url), url: c.url, checked_date: c.checked_date, quote: c.quote };
+}
+
+export function normalizeSource(s: Source | string): Source {
+  return typeof s === "string" ? { title: hostOf(s), url: s } : s;
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/** Only http(s) links may open. This stops `javascript:` and similar URLs in agent output. */
+export function isSafeUrl(url: string): boolean {
+  try {
+    const u = new URL(url, "http://localhost");
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+/** Runtime guard: events come from a network stream later, so never trust their shape. */
+export function parseEvent(raw: unknown): AgentEvent | null {
+  if (!raw || typeof raw !== "object") return null;
+  const e = raw as Record<string, unknown>;
+  if (!TOOLS.includes(e.tool as Tool)) return null;
+  if (typeof e.item_id !== "string" || typeof e.ts !== "string") return null;
+  if (e.status !== undefined && !STATUSES.includes(e.status as ItemStatus)) return null;
+  if (e.text !== undefined && typeof e.text !== "string") return null;
+  if (e.citation !== undefined) {
+    const c = e.citation as RawCitation;
+    const ok = typeof c === "string" || (typeof c === "object" && c !== null && typeof (c as { url?: unknown }).url === "string");
+    if (!ok) return null;
+  }
+  return e as unknown as AgentEvent;
+}

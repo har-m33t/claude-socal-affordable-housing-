@@ -23,3 +23,9 @@ data/raw/*
 # extracted file stays untracked. Re-extract with:
 #   unzip -q claude-impact-lab-uci-main.zip -d .
 claude-impact-lab-uci-main/
+
+# Next.js / Node
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo

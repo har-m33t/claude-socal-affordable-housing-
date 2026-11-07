@@ -1,0 +1,21 @@
+{
+  "_mock": "MADE-UP applicant packet. Not a real person.",
+  "files": [
+    {
+      "name": "application-form.pdf",
+      "declared_type": "application"
+    },
+    {
+      "name": "floor-plan-v2.pdf",
+      "declared_type": "floor_plan"
+    },
+    {
+      "name": "IMG_2041.jpg",
+      "declared_type": "unknown"
+    },
+    {
+      "name": "hold-harmless-signed.pdf",
+      "declared_type": "affidavit"
+    }
+  ]
+}
