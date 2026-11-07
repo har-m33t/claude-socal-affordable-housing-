@@ -28,15 +28,15 @@ export function ReadinessReport() {
     const accepted = st?.suggestions.filter((s) => s.decision === "accepted") ?? [];
     const pending = st?.suggestions.filter((s) => s.decision === "pending") ?? [];
     return (
-      <li className="report-row">
+      <li className="box-row">
         <div className="flex items-start justify-between gap-3">
           <p className="font-medium">
-            <span className="mr-1.5 tabular-nums text-[var(--color-ink-soft)]">{n}.</span>
+            <span className="mr-1.5 font-mono text-xs tabular-nums text-[var(--fg-muted)]">{n}.</span>
             {c.text}
           </p>
           <StatusPill status={st?.status} />
         </div>
-        {st?.statusText && <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{st.statusText}</p>}
+        {st?.statusText && <p className="mt-1 text-sm text-[var(--fg-muted)]">{st.statusText}</p>}
         {st?.notes.map((note, k) => (
           <p key={k} className="mt-1 text-sm">
             <span className="font-semibold">Next step:</span> {note}
@@ -48,60 +48,69 @@ export function ReadinessReport() {
           </p>
         ))}
         {pending.length > 0 && (
-          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{pending.length} drafted suggestion(s) not yet accepted or rejected in the editor.</p>
+          <p className="mt-1 text-sm text-[var(--fg-muted)]">{pending.length} drafted suggestion(s) not yet accepted or rejected in the editor.</p>
         )}
       </li>
     );
   };
 
   return (
-    <article className="mx-auto w-full max-w-3xl px-5 py-8">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="font-serif text-3xl">Readiness report</h1>
-        <div className="flex gap-2 print:hidden">
-          <Link href="/" className="btn btn-ghost">
-            ← Back to editor
-          </Link>
-          <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-            Print or save as PDF
-          </button>
+    <article className="mx-auto w-full max-w-4xl px-4 py-8 md:px-6">
+      <div className="border-b border-[var(--border-muted)] pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl">Readiness report</h1>
+          <div className="flex gap-2 print:hidden">
+            <Link href="/" className="btn btn-ghost">
+              ← Back to editor
+            </Link>
+            <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+              Print or save as PDF
+            </button>
+          </div>
         </div>
-      </div>
-      <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-        {city.city} · ADU · checklist checked {city.checked_date ?? "unknown"} · from the mock run with a made-up applicant.
-        This report is for you and your designer. Pointer does not submit it.
-      </p>
-
-      <div className="mt-6 rounded-lg border border-[var(--color-line)] bg-[var(--color-paper)] p-5">
-        <div className="flex items-end justify-between">
-          <p className="font-serif text-4xl tabular-nums">
-            {r.complete.length}
-            <span className="text-xl text-[var(--color-ink-soft)]"> / {total} items complete</span>
-          </p>
-          <p className="text-sm text-[var(--color-ink-soft)]">{pct}%</p>
-        </div>
-        <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-[var(--color-cream-deep)]" aria-hidden>
-          <div className="bg-[var(--color-complete)]" style={{ width: `${(r.complete.length / total) * 100}%` }} />
-          <div className="bg-[var(--color-missing)]" style={{ width: `${(r.missing.length / total) * 100}%` }} />
-          <div className="bg-[var(--color-unknown)]" style={{ width: `${(r.unknown.length / total) * 100}%` }} />
-        </div>
-        <p className="mt-2 flex flex-wrap gap-x-4 text-sm">
-          <span className="text-[var(--color-complete)]">● {r.complete.length} complete</span>
-          <span className="text-[var(--color-missing)]">● {r.missing.length} missing</span>
-          <span className="text-[var(--color-unknown)]">● {r.unknown.length} unknown</span>
-          {r.notReviewed.length > 0 && <span className="text-[var(--color-ink-soft)]">○ {r.notReviewed.length} not reviewed</span>}
+        <p className="mt-1 text-sm text-[var(--fg-muted)]">
+          {city.city} · ADU · checklist checked {city.checked_date ?? "unknown"} · from the mock run with a made-up applicant.
+          This report is for you and your designer. Pointer does not submit it.
         </p>
+      </div>
+
+      <div className="box anim-fade-up mt-6">
+        <div className="box-header justify-between">
+          <h2 className="box-title">Checklist progress</h2>
+          <span className="text-sm tabular-nums text-[var(--fg-muted)]">{pct}%</span>
+        </div>
+        <div className="p-4">
+          <p className="text-3xl font-semibold tracking-tight tabular-nums">
+            {r.complete.length}
+            <span className="text-base font-normal text-[var(--fg-muted)]"> / {total} items complete</span>
+          </p>
+          <div className="mt-3 flex h-2 gap-0.5 overflow-hidden rounded-full bg-[var(--bg-muted)]" aria-hidden>
+            <div className="bg-[var(--success-emphasis)]" style={{ width: `${(r.complete.length / total) * 100}%` }} />
+            <div className="bg-[var(--danger)]" style={{ width: `${(r.missing.length / total) * 100}%` }} />
+            <div className="bg-[var(--neutral)]" style={{ width: `${(r.unknown.length / total) * 100}%` }} />
+          </div>
+          <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <span className="text-[var(--success)]">● {r.complete.length} complete</span>
+            <span className="text-[var(--danger)]">● {r.missing.length} missing</span>
+            <span className="text-[var(--neutral)]">● {r.unknown.length} unknown</span>
+            {r.notReviewed.length > 0 && <span className="text-[var(--fg-muted)]">○ {r.notReviewed.length} not reviewed</span>}
+          </p>
+        </div>
       </div>
 
       <Section title="Missing: fix these before you submit" ids={r.missing} Row={Row} />
       <Section title="Unknown: ask the city" ids={r.unknown} Row={Row} />
       {r.flagged.length > 0 && (
-        <section className="mt-8">
-          <h2 className="font-serif text-xl">Law Lens: outdated references in the city&apos;s form</h2>
-          <ul className="mt-3 space-y-2">
+        <section className="box mt-6">
+          <h2 className="box-header box-title">
+            Law Lens: outdated references in the city&apos;s form <span className="counter">{r.flagged.length}</span>
+          </h2>
+          <ul>
             {r.flagged.map((id) => (
-              <li key={id} className="lawlens-note rounded border-l-4 px-3 py-2 text-sm">
-                <span className="font-semibold">Item {byId[id].n}:</span> {run.items[id]?.highlightText?.replace(/^Law Lens:\s*/i, "")}
+              <li key={id} className="box-row text-sm">
+                <div className="lawlens-note rounded-md border-l-4 px-3 py-2">
+                  <span className="font-semibold">Item {byId[id].n}:</span> {run.items[id]?.highlightText?.replace(/^Law Lens:\s*/i, "")}
+                </div>
               </li>
             ))}
           </ul>
@@ -110,16 +119,18 @@ export function ReadinessReport() {
       <Section title="Complete" ids={r.complete} Row={Row} />
       {r.notReviewed.length > 0 && <Section title="Not reviewed" ids={r.notReviewed} Row={Row} />}
 
-      <section className="mt-8">
-        <h2 className="font-serif text-xl">Sources</h2>
-        <div className="mt-3 flex flex-wrap gap-2">
+      <section className="box mt-6">
+        <h2 className="box-header box-title">
+          Sources <span className="counter">{allCitations.size}</span>
+        </h2>
+        <div className="flex flex-wrap gap-2 p-4">
           {[...allCitations.values()].map((c) => (
             <CitationChip key={c.url} c={c} />
           ))}
         </div>
       </section>
 
-      <p className="mt-10 border-t border-[var(--color-line)] pt-4 text-xs text-[var(--color-ink-soft)]">
+      <p className="mt-10 border-t border-[var(--border-muted)] pt-4 text-xs text-[var(--fg-muted)]">
         Prototype, not legal advice. Requirements change and city documents can be out of date. Confirm every item with the
         city&apos;s permit counter and a licensed professional before you act.
       </p>
@@ -130,11 +141,11 @@ export function ReadinessReport() {
 function Section({ title, ids, Row }: { title: string; ids: string[]; Row: (p: { id: string }) => React.ReactNode }) {
   if (ids.length === 0) return null;
   return (
-    <section className="mt-8">
-      <h2 className="font-serif text-xl">
-        {title} <span className="text-base text-[var(--color-ink-soft)]">({ids.length})</span>
+    <section className="box mt-6">
+      <h2 className="box-header box-title">
+        {title} <span className="counter">{ids.length}</span>
       </h2>
-      <ul className="mt-3 space-y-2">
+      <ul>
         {ids.map((id) => (
           <Row key={id} id={id} />
         ))}

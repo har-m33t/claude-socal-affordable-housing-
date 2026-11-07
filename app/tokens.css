@@ -13,7 +13,7 @@
   /* text */
   --fg: #1f2328;
   --fg-muted: #59636e;
-  --fg-subtle: #818b98;
+  --fg-subtle: #6e7781; /* tuned from #818b98 (3.5:1) to pass AA on --bg */
   --fg-on-emphasis: #ffffff;
 
   /* roles */
