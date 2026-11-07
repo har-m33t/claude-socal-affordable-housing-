@@ -42,7 +42,7 @@ export interface ChecklistItem {
   id: string;
   text: string;
   page: number;
-  box: [number, number, number, number];
+  box: [number, number, number, number] | null;
   doc_type: string;
   source: Source | string;
 }

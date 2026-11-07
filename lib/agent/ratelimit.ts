@@ -163,6 +163,17 @@ export function clientKey(headers: Headers, trustProxy = trustProxyHeaders()): s
 let shared: RateLimiter | null = null;
 
 /** The process-wide limiter the route uses. Built on first use. */
+/**
+ * The caps the limiters share, read from the environment. Exported so the
+ * durable (Redis) limiter enforces exactly the same numbers as the in-process
+ * one it falls back to - two sources of truth would mean the ceiling silently
+ * changes depending on which backend answered.
+ */
+export function rateLimitOptions(): { max: number; globalMax: number; windowMs: number } {
+  const { max, globalMax, windowMs } = readRateLimit();
+  return { max, globalMax, windowMs };
+}
+
 export function requestRateLimiter(): RateLimiter {
   if (shared === null) {
     const { max, globalMax, windowMs } = readRateLimit();
@@ -171,7 +182,27 @@ export function requestRateLimiter(): RateLimiter {
   return shared;
 }
 
+/**
+ * The limiter used when a durable backend is CONFIGURED but not answering.
+ *
+ * Memoized at module scope for the same reason `requestRateLimiter` is: a
+ * limiter built per request starts from zero every time, so its cap is never
+ * reached and the "degraded" path is really fail-open. Counts must carry
+ * across requests in the instance to mean anything.
+ */
+let degradedShared: RateLimiter | null = null;
+
+export function degradedRateLimiter(
+  caps: { max: number; globalMax: number; windowMs: number },
+): RateLimiter {
+  if (degradedShared === null) {
+    degradedShared = createRateLimiter(caps);
+  }
+  return degradedShared;
+}
+
 /** Drops the shared limiter so the next call re-reads the env. For tests. */
 export function resetRateLimiter(): void {
   shared = null;
+  degradedShared = null;
 }

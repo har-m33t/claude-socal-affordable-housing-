@@ -24,7 +24,13 @@ import { z } from "zod";
 // test runner does not resolve tsconfig paths.
 import { hasApiKey, recordingEnabled } from "../../../lib/agent/config";
 import { runAgent } from "../../../lib/agent/loop";
-import { clientKey, requestRateLimiter } from "../../../lib/agent/ratelimit";
+import {
+  clientKey,
+  degradedRateLimiter,
+  rateLimitOptions,
+  requestRateLimiter,
+} from "../../../lib/agent/ratelimit";
+import { checkDurableLimit, degradedCaps, durableBackend } from "../../../lib/agent/durable-limit";
 import { sseResponse } from "../../../lib/agent/sse";
 import type { AgentRunInput } from "../../../lib/agent/loop";
 
@@ -126,7 +132,24 @@ export async function POST(request: Request): Promise<Response> {
   // Only live runs spend tokens, so only live runs are rate limited. Two caps
   // are checked: the whole app's ceiling first, then this client's own.
   if (live) {
-    const decision = requestRateLimiter().check(clientKey(request.headers));
+    const who = clientKey(request.headers);
+    const caps = rateLimitOptions();
+    // Durable first: in-process counters are per serverless instance, so on
+    // Vercel the global cap is only real when it lives in Redis.
+    const durable = await checkDurableLimit(who, caps);
+    let decision = durable;
+    if (decision === null) {
+      // Redis did not answer. If it was never configured, the in-process
+      // limiter is simply the limiter. If it WAS configured, treat this as
+      // degraded and apply a deliberately tighter budget: otherwise an
+      // attacker who can break Redis (by exhausting its quota, say) would
+      // silently restore the per-instance ceiling the durable limiter exists
+      // to replace - an escalation, not a fallback.
+      const configured = durableBackend() !== null;
+      decision = configured
+        ? degradedRateLimiter({ ...caps, ...degradedCaps(caps) }).check(who)
+        : requestRateLimiter().check(who);
+    }
     if (!decision.ok) {
       const seconds = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
       const atGlobalCeiling = decision.scope === "global";
