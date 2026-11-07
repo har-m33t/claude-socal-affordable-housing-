@@ -107,19 +107,20 @@ and a short privacy notice on the first screen.
 
 ## Sources and assumptions
 
-These sources come from the event's Lane 2 data list, checked by the organizers on 2026-11-06.
-We re-check each one in a browser before it goes live in the app. **Team 1: replace the dates
-below with your own check dates.**
+Team 1 read these sources on 2026-11-07, from copies downloaded that day. Each entry is quoted in
+`data/` with its URL and page.
 
 | Item | Source or assumption | Date checked |
 |---|---|---|
-| Anaheim ADU tracks, including ADU Express (1 to 3 day review) | [ADU Anaheim](https://www.anaheim.net/6349/ADU-Anaheim) | 2026-11-06 (organizers) |
-| Anaheim pre-approved plans (4 free plans, 224 to 1,199 sf) | [Pre-Approved Plan Catalogue](https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue) | 2026-11-06 (organizers) |
-| Anaheim checklist items, and its citation of Gov Code 65852.2 and 65852.22 | [ADU Submittal Requirements Checklist, Nov 2025](https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist) | 2026-11-06 (organizers) |
-| ADU and JADU rules under the current numbering | [HCD ADU Handbook, March 2026](https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf) ([translations](https://www.hcd.ca.gov/building-standards/adu/handbook)) | 2026-11-06 (organizers) |
-| 65852.2 was renumbered to Gov Code 66310 to 66342 (SB 477, 2024). Law Lens shows the **range** unless a specific section is confirmed on leginfo | [Gov Code 66314](https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=66314) | 2026-11-06 (organizers) |
+| Anaheim ADU tracks, including ADU Express | [ADU Anaheim](https://www.anaheim.net/6349/ADU-Anaheim): "complete the ADU review process within 1-3 days" | 2026-11-07 |
+| **Anaheim's sources disagree on ADU Express timing.** Pointer shows both and does not pick one | The Nov 2025 checklist says "one day permitting". The [Pre-Approved Plan Catalogue](https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue) says eligibility screening "can take a few weeks" | 2026-11-07 |
+| Anaheim pre-approved plans | [Pre-Approved Plan Catalogue](https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue) | 2026-11-07 |
+| Anaheim checklist items, and its citation of Gov Code 65852.2 and 65852.22 | [ADU Submittal Requirements Checklist, Nov 2025 (Z412)](https://www.anaheim.net/DocumentCenter/View/35053/Accessory-Dwelling-Unit-Submittal-Requirements-Checklist) | 2026-11-07 |
+| 65852.2, .22, .23 and .26 were renumbered to the **range** Gov Code 66310 to 66342 (SB 477, 2024). Law Lens shows the range, not a single section | [HCD ADU Handbook, March 2026, p. 13](https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=13) | 2026-11-07 |
+| The 60-day approve-or-deny deadline is Gov Code 66317(a)(3). The organizers' list said 66314 | [HCD ADU Handbook, p. 11](https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=11) | 2026-11-07 |
+| JADU owner occupancy is now required only when the JADU shares sanitation with the main home (Gov Code § 66333(b)). Anaheim's checklist requires it for all JADUs, so Pointer flags this as possibly out of date | [HCD ADU Handbook, p. 14](https://www.hcd.ca.gov/sites/default/files/docs/policy-and-research/adu-handbook-update.pdf#page=14) | 2026-11-07 |
 | City list for the coverage table (34 OC cities) | Event bundle `lanes/2-clear-it/data/oc-cities.json` | 2026-11-06 (organizers) |
-| Irvine ADU review rate, $210.70/hr with a $1,500 deposit (savings formula, Irvine only) | [Irvine fee schedule](https://www.cityofirvine.gov/community-development/fee-schedule) | 2026-11-06 (organizers) |
+| Irvine ADU review rate, $210.70/hr with a $1,500 deposit (savings formula, Irvine only) | [Irvine fee schedule](https://www.cityofirvine.gov/community-development/fee-schedule). Not re-checked by the team | 2026-11-06 (organizers) |
 | `R` correction rounds avoided, `W` weeks per round, `C` weekly carrying cost, `D` design cost avoided | **ASSUMPTION.** No public data on correction rounds was found. The sliders start empty and the homeowner enters them | n/a |
 | Anaheim's hourly review rate | **Unknown.** Not checked | n/a |
 | Orange County APNs look like `###-###-##` | **ASSUMPTION** used by the redactor. Based on the common OC Assessor format; not checked against every parcel | n/a |
@@ -129,7 +130,7 @@ below with your own check dates.**
 
 | Part | Status |
 |---|---|
-| Anaheim checklist, city page and sources | Real public documents (Team 1 builds `data/cities/anaheim.json`) |
+| Anaheim checklist, city page and sources | Real public documents. `data/cities/anaheim.json` has 6 checklist items read from the PDF text layer, each with its page and box |
 | The other 33 OC cities | Listed on the coverage table as **not yet verified**. They give no advice |
 | SB 9 project type | Stub that shows "rules not yet verified" |
 | Applicant and their uploaded packet | **Mocked.** Made-up person |
