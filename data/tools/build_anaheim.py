@@ -30,14 +30,20 @@ CHECKLIST_URL = ("https://www.anaheim.net/DocumentCenter/View/35053/"
 ADU_PAGE = "https://www.anaheim.net/6349/ADU-Anaheim"
 PLANS_PAGE = "https://www.anaheim.net/6351/Pre-Approved-Plan-Catalogue"
 
-# (id, first line, last line, doc_type, applies_to)
+# (id, first line, last line, label the first line must contain, last line must end with,
+#  doc_type, applies_to). The label checks stop a re-extraction that orders lines
+# differently from silently giving an item the wrong text and box.
 ITEMS = [
-    ("sewer-capacity-verification", 16, 19, "sewer_capacity_verification", "adu_and_jadu"),
-    ("meter-spot-report", 20, 23, "meter_spot_report", "adu_and_jadu"),
-    ("new-address-request", 24, 27, "new_address_request", "adu_and_jadu"),
-    ("jadu-owner-occupancy-covenant", 29, 43, "owner_occupancy_covenant", "jadu"),
-    ("jadu-title-report", 44, 44, "title_report", "jadu"),
-    ("jadu-grant-deed", 45, 45, "grant_deed", "jadu"),
+    ("sewer-capacity-verification", 16, 19, "SEWER DEFICIENCY VERIFICATION", "email inquiry.",
+     "sewer_capacity_verification", "adu_and_jadu"),
+    ("meter-spot-report", 20, 23, "METER SPOT REPORT", "plan check submittal.",
+     "meter_spot_report", "adu_and_jadu"),
+    ("new-address-request", 24, 27, "NEW ADDRESS REQUEST", "same day processing.",
+     "new_address_request", "adu_and_jadu"),
+    ("jadu-owner-occupancy-covenant", 29, 43, "OWNER OCCUPANCY COVENANT", "Clerk\u2019s office:",
+     "owner_occupancy_covenant", "jadu"),
+    ("jadu-title-report", 44, 44, "TITLE REPORT", "submittal date)", "title_report", "jadu"),
+    ("jadu-grant-deed", 45, 45, "GRANT DEED", "GRANT DEED", "grant_deed", "jadu"),
 ]
 
 FAST_PATHS = [
@@ -67,15 +73,18 @@ FAST_PATHS = [
 
 
 def clean(text: str) -> str:
-    text = text.replace("☐", "").replace("", "•")
+    text = text.replace("\u2610", "").replace("\uf0a7", "\u2022")
     return re.sub(r"\s+", " ", text).strip()
 
 
 def main() -> int:
     lines = json.loads(LINES.read_text(encoding="utf-8"))["lines"]
     checklist = []
-    for iid, a, b, doc_type, applies in ITEMS:
+    for iid, a, b, label, ending, doc_type, applies in ITEMS:
         span = lines[a:b + 1]
+        if len(span) != b - a + 1 or label not in span[0]["text"] or not span[-1]["text"].endswith(ending):
+            raise SystemExit(f"{iid}: lines {a}-{b} no longer start with {label!r} and end with "
+                             f"{ending!r}; re-check ITEMS against the extracted lines")
         pages = {l["page"] for l in span}
         assert len(pages) == 1, f"{iid} spans pages {pages}"
         x0 = min(l["box"][0] for l in span)
@@ -91,6 +100,12 @@ def main() -> int:
             "applies_to": applies,
             "source": CHECKLIST_URL,
         })
+    # A line that starts with the checkbox glyph gets a ~27 pt tall box, so an item's box
+    # can reach into the next item. Clip each box so it ends where the next item starts.
+    for cur, nxt in zip(checklist, checklist[1:]):
+        if cur["page"] == nxt["page"]:
+            x, y, w, h = cur["box"]
+            cur["box"][3] = round(min(h, nxt["box"][1] - y), 1)
     city = {
         "city": "Anaheim",
         "verified": True,  # reviewed by the Team 1 lead, 2026-11-07

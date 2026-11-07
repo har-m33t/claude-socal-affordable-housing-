@@ -10,7 +10,8 @@ redaction tests use applicant.json as the list of values that must be caught.
 
 declared_type values match the doc_type keys in cities/anaheim.json. The
 applicant is adding a detached ADU (no JADU), so the three JADU items do not
-apply. Demo gaps, on purpose: the new address request is missing its site
+apply. The ADU gets a new electric meter, which makes the conditional meter spot
+report item apply. Demo gaps, on purpose: the new address request is missing its site
 plan, and there is no meter spot report. The floor plan is not a Planning
 checklist item and is declared unknown for the agent to classify.
 """
@@ -92,8 +93,9 @@ def main() -> int:
         (OUT / name).write_bytes(pdf(header + [title]))
     manifest = {
         "about": "MADE UP applicant packet for the Pointer demo. No real person or property. "
-                 "Detached ADU, no JADU. Intentionally missing: the site plan for the new "
-                 "address request, and the meter spot report.",
+                 "Detached ADU with a new electric meter, no JADU, so the meter spot report "
+                 "is required. Intentionally missing: the site plan for the new address "
+                 "request, and the meter spot report.",
         "files": [{"name": n, "declared_type": t} for n, t, _ in DOCS],
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
