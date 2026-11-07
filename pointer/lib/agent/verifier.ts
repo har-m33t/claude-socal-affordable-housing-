@@ -44,37 +44,80 @@ import type {
 // ----------------------------------------------------------- normalization
 
 /**
- * Characters that carry no visible width and so can be used to split a word or
- * a number in two without a reader noticing: format characters (zero-width
- * space and friends, the soft hyphen, the byte-order mark, variation
- * selectors) and combining marks.
+ * Characters that render blank, or carry no width at all, and so can be used
+ * to split a word or a number in two without a reader noticing.
+ *
+ * Category alone is not enough here. Format characters and combining marks
+ * cover the zero-width spaces, the soft hyphen, the byte-order mark and the
+ * variation selectors, but several blank-rendering code points sit in
+ * unrelated categories: U+2800 BRAILLE PATTERN BLANK is `So`, and the Hangul
+ * fillers are `Lo`. Each code point below was checked against Node 20 rather
+ * than assumed - the fillers are `Default_Ignorable_Code_Point` but U+2800 is
+ * not, so it is named explicitly.
  */
-const INVISIBLE_OR_COMBINING = /[\p{Cf}\p{Mn}\p{Me}]/gu;
-
-/** Whitespace sitting between two digits, as in "66 333". */
-const SPACE_INSIDE_NUMBER = /(?<=\p{Nd})[\p{Zs}\s]+(?=\p{Nd})/gu;
+const BLANK_RENDERING =
+  /[\p{Cf}\p{Mn}\p{Me}\p{Default_Ignorable_Code_Point}\u2800\u115F\u1160\u3164\uFFA0]/gu;
 
 /**
- * Fold the text into the form the detectors run against.
+ * Invisible or hair-thin characters sitting between two digits, which is the
+ * shape of an attempt to break up a section number: "66<U+2009>333".
  *
- * NFKD first so compatibility forms come apart (fullwidth and mathematical
- * digits become ASCII, accented letters separate from their marks), then strip
- * the invisibles and marks, then NFKC to put what is left back together, then
- * close up whitespace inside numbers.
+ * Deliberately NOT ordinary spaces, tabs or newlines. Joining across those
+ * welds a section number to whatever number follows it - "Section 66333 2024"
+ * becomes the 9-digit run "663332024", which no section pattern matches, and
+ * the reference disappears. A vanished reference is far worse than a false
+ * positive: it is a miss, and the claim then sails through.
+ *
+ * This runs on the RAW text, before normalization. NFKD folds U+2009, U+200A
+ * and U+202F into ordinary spaces, so after normalization they are no longer
+ * distinguishable from a space that was always a space.
+ */
+const BLANK_INSIDE_NUMBER =
+  /(?<=\p{Nd})[\p{Cf}\p{Default_Ignorable_Code_Point}\u2800\u115F\u1160\u3164\uFFA0\u2009\u200A\u202F]+(?=\p{Nd})/gu;
+
+/** The two forms the detectors run against. */
+interface NormalizedText {
+  /** Folded, with digit runs left exactly as the author spaced them. */
+  unjoined: string;
+  /** Folded, with invisible and hair-thin breaks inside numbers closed up. */
+  joined: string;
+}
+
+/**
+ * Fold the text: NFKD so compatibility forms come apart (fullwidth and
+ * mathematical digits become ASCII, accented letters separate from their
+ * marks), strip what renders blank, then NFKC to put the rest back together.
+ */
+function fold(text: string): string {
+  return text.normalize("NFKD").replace(BLANK_RENDERING, "").normalize("NFKC");
+}
+
+/**
+ * Both forms are kept and both are searched, belt and braces. The joined form
+ * catches a number broken up on purpose; the unjoined form guarantees that no
+ * future change to the joining rule can silently hide a reference that plain
+ * text would have shown. Callers union the results.
  *
  * Only the decision uses this. The event keeps its original text.
  */
-function normalizeForDetection(text: string): string {
-  return text
-    .normalize("NFKD")
-    .replace(INVISIBLE_OR_COMBINING, "")
-    .normalize("NFKC")
-    .replace(SPACE_INSIDE_NUMBER, "");
+function normalizeForDetection(text: string): NormalizedText {
+  return { unjoined: fold(text), joined: fold(text.replace(BLANK_INSIDE_NUMBER, "")) };
 }
 
 // --------------------------------------------------------------- detection
 
 /*
+ * WHAT THIS IS AND IS NOT. Everything below is a regex detector run over model
+ * output after the fact. That makes it a mitigation, not a guarantee, and it
+ * should not be read as a hard gate. Known-open evasions: Unicode confusables
+ * (UTS #39 skeletons - NFKC does not fold Cyrillic "c" onto Latin "c", so a
+ * homoglyph in a law-asserting phrase still passes), letter-spaced phrases
+ * ("m i n i s t e r i a l"), and the fact that a citation is checked for form
+ * and not for truth, so a well-formed but fabricated source_url backs any
+ * claim. The robust alternative is not a better regex: law-bearing prose
+ * should be constructed from verified data rather than scanned after it has
+ * been written.
+ *
  * Every pattern below carries the `u` flag and spells a digit `\p{Nd}`, not
  * `\d`. `\d` is ASCII-only, so an Arabic-Indic or other non-ASCII numeral
  * would slip past a `\d` pattern even after normalization - NFKC does not fold
@@ -105,8 +148,16 @@ const SECTION_MARKER_CITATION =
  */
 const BARE_STATUTE_NUMBER = /(?<![\p{Nd}.,])\p{Nd}{5}(?:\.\p{Nd}{1,3})?(?!\p{Nd})/u;
 
-/** A California bill reference: "SB 9", "AB 2221", "SB 477", "S.B. 9". */
-const BILL_REFERENCE = /\b(?:s\.?\s?b\.?|a\.?\s?b\.?|ac\.?a\.?|sc\.?a\.?)\s*-?\s*\p{Nd}{1,4}\b/iu;
+/**
+ * A California bill reference: "SB 9", "AB 2221", "SB 477", "S.B. 9".
+ *
+ * The boundaries are spelled out rather than `\b`, because `\b` is defined on
+ * ASCII word characters: with `\p{Nd}` matching a non-ASCII numeral, a
+ * trailing `\b` sees no boundary between that numeral and a following space
+ * and the whole match fails. "SB <Arabic-Indic nine>" slipped through that way.
+ */
+const BILL_REFERENCE =
+  /(?<![\p{L}\p{Nd}_])(?:s\.?\s?b\.?|a\.?\s?b\.?|ac\.?a\.?|sc\.?a\.?)\s*-?\s*\p{Nd}{1,4}(?![\p{L}\p{Nd}_])/iu;
 
 /** Prose that asserts what the law is, independent of any number. */
 const LAW_ASSERTING_PHRASES: readonly RegExp[] = [
@@ -154,13 +205,18 @@ const STATUTE_LIKE_PATTERNS: readonly RegExp[] = [
  */
 export function looksLikeLawClaim(text: string): boolean {
   if (typeof text !== "string") return false;
-  const normalized = normalizeForDetection(text).trim();
-  if (normalized === "") return false;
+  const normalized = normalizeForDetection(text);
+  return matchesAnyPattern(normalized.unjoined) || matchesAnyPattern(normalized.joined);
+}
+
+function matchesAnyPattern(candidate: string): boolean {
+  const trimmed = candidate.trim();
+  if (trimmed === "") return false;
   for (const pattern of STATUTE_LIKE_PATTERNS) {
-    if (pattern.test(normalized)) return true;
+    if (pattern.test(trimmed)) return true;
   }
   for (const pattern of LAW_ASSERTING_PHRASES) {
-    if (pattern.test(normalized)) return true;
+    if (pattern.test(trimmed)) return true;
   }
   return false;
 }
@@ -204,9 +260,28 @@ function digitCount(token: string): number {
  * bill passed on the strength of the section alone. Everything that points at
  * law is enumerated here, and verifyEvent requires all of it to resolve.
  */
-function collectReferences(normalized: string): LawReference[] {
+function collectReferences(normalized: NormalizedText): LawReference[] {
   const found: LawReference[] = [];
 
+  // Both forms are scanned and the results unioned, so a reference only has to
+  // be visible in ONE of them to be required to resolve.
+  scanForReferences(normalized.unjoined, found);
+  if (normalized.joined !== normalized.unjoined) {
+    scanForReferences(normalized.joined, found);
+  }
+
+  const seen = new Set<string>();
+  return found
+    .filter((reference) => {
+      const key = `${reference.kind}:${reference.token}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.index - b.index);
+}
+
+function scanForReferences(normalized: string, found: LawReference[]): void {
   for (const match of normalized.matchAll(STATUTE_TOKEN_SCAN)) {
     const token = match[0];
     const index = match.index ?? 0;
@@ -227,16 +302,6 @@ function collectReferences(normalized: string): LawReference[] {
   for (const match of normalized.matchAll(BILL_REFERENCE_SCAN)) {
     found.push({ kind: "bill", token: match[0], index: match.index ?? 0 });
   }
-
-  const seen = new Set<string>();
-  return found
-    .filter((reference) => {
-      const key = `${reference.kind}:${reference.token}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .sort((a, b) => a.index - b.index);
 }
 
 /** True when a Government Code or section marker sits immediately before `token`. */
