@@ -23,6 +23,15 @@ import { APIError } from "@anthropic-ai/sdk";
 import { readFile } from "node:fs/promises";
 import * as nodePath from "node:path";
 
+// Wired statically by the lead at integration. These were loaded through a
+// `string`-typed dynamic specifier while the three lanes were built in
+// parallel, so `tsc` would not resolve files a lane did not own. A bundler
+// cannot follow an expression specifier, so a Next build needs them static.
+import { TOOL_DEFINITIONS, validateToolInput } from "./tools";
+import { verifyEvent } from "./verifier";
+import { createRecorder } from "./recorder";
+import { loadReplay } from "./replay";
+
 import {
   DEFAULT_EFFORT,
   MODEL,
@@ -109,61 +118,13 @@ export interface AgentRunDeps {
 /** Consecutive unparseable-tool-input turns tolerated before giving up. */
 export const MAX_PARSE_RETRIES = 2;
 
-// -------------------------------------------------------------- lane loading
-// INTEGRATION NOTE for the lead: the specifier is held in a `string`-typed
-// variable on purpose, so `tsc` does not resolve a file this lane does not own
-// and typecheck stays clean in isolation. Once the other lanes have landed,
-// replace the three loaders below with plain static imports:
-//     import { TOOL_DEFINITIONS, validateToolInput } from "./tools";
-//     import { verifyEvent } from "./verifier";
-//     import { createRecorder } from "./recorder";
-//     import { loadReplay } from "./replay";
-// and drop `importLane`. Bundlers cannot follow an expression specifier.
-async function importLane(relative: string): Promise<Record<string, unknown> | null> {
-  const specifier: string = relative;
-  try {
-    return (await import(specifier)) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-async function laneTools(): Promise<ToolsLike | null> {
-  const mod = await importLane("./tools");
-  if (mod === null) return null;
-  const defs = mod["TOOL_DEFINITIONS"];
-  const validate = mod["validateToolInput"];
-  if (!Array.isArray(defs) || typeof validate !== "function") return null;
-  return {
-    TOOL_DEFINITIONS: defs as Anthropic.Tool[],
-    validateToolInput: validate as ToolsLike["validateToolInput"],
-  };
-}
-
-async function laneVerifier(): Promise<VerifierLike | null> {
-  const mod = await importLane("./verifier");
-  if (mod === null) return null;
-  const verify = mod["verifyEvent"];
-  if (typeof verify !== "function") return null;
-  return { verifyEvent: verify as VerifierLike["verifyEvent"] };
-}
-
-async function laneReplay(): Promise<ReplayLoader | null> {
-  const mod = await importLane("./replay");
-  if (mod === null) return null;
-  const load = mod["loadReplay"];
-  return typeof load === "function" ? (load as ReplayLoader) : null;
-}
-
-async function laneRecorder(): Promise<RecorderFactory | null> {
-  const mod = await importLane("./recorder");
-  if (mod === null) return null;
-  for (const name of ["createRecorder", "makeRecorder", "newRecorder", "default"]) {
-    const candidate = mod[name];
-    if (typeof candidate === "function") return candidate as RecorderFactory;
-  }
-  return null;
-}
+// -------------------------------------------------------------- lane wiring
+// Resolved at module load now that every lane has landed. `deps` still wins,
+// so tests keep injecting stubs; these are only the defaults.
+const LANE_TOOLS: ToolsLike = { TOOL_DEFINITIONS, validateToolInput };
+const LANE_VERIFIER: VerifierLike = { verifyEvent };
+const LANE_REPLAY: ReplayLoader = loadReplay;
+const LANE_RECORDER: RecorderFactory = createRecorder;
 
 // ----------------------------------------------------------------- data load
 
@@ -276,12 +237,8 @@ export async function* runAgent(
 ): AsyncGenerator<StreamFrame, void, void> {
   let recorder: RecorderHandle | null = null;
   if (request.record === true) {
-    const factory = deps.recorder ?? (await laneRecorder());
-    if (factory === null) {
-      yield error("recorder_unavailable", "Recording was requested but the recorder is missing.");
-    } else {
-      recorder = await factory();
-    }
+    const factory = deps.recorder ?? LANE_RECORDER;
+    recorder = await factory();
   }
 
   for await (const frame of runCore(request, deps)) {
@@ -315,11 +272,7 @@ async function* runCore(
 
   // --- replay: deterministic, offline, and no client is ever constructed.
   if (request.replay === true) {
-    const loader = deps.loadReplay ?? (await laneReplay());
-    if (loader === null) {
-      yield error("replay_unavailable", "Replay was requested but the replay reader is missing.");
-      return;
-    }
+    const loader = deps.loadReplay ?? LANE_REPLAY;
     let frames: StreamFrame[];
     try {
       frames = await loader(deps.replayPath ?? nodePath.join(appRoot, REPLAY_PATH));
@@ -393,18 +346,8 @@ async function* runCore(
   }
 
   // --- the other lanes' modules.
-  const tools = deps.tools ?? (await laneTools());
-  if (tools === null) {
-    yield error("tools_unavailable", "The tool definitions are not available in this build.");
-    yield status("stopped", "tools missing");
-    return;
-  }
-  const verifier = deps.verifier ?? (await laneVerifier());
-  if (verifier === null) {
-    yield error("verifier_unavailable", "The citation verifier is not available in this build.");
-    yield status("stopped", "verifier missing");
-    return;
-  }
+  const tools = deps.tools ?? LANE_TOOLS;
+  const verifier = deps.verifier ?? LANE_VERIFIER;
 
   let statutes: StatuteEntry[];
   try {
