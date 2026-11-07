@@ -1,6 +1,12 @@
 {
   "repo": "har-m33t/claude-socal-affordable-housing-",
-  "trusted_authors": ["har-m33t"],
+  "trusted_authors": [
+    "har-m33t",
+    "AndonyVel",
+    "matthhw3",
+    "mitcheltu",
+    "NicholasHat"
+  ],
   "lease_minutes": 60,
   "poll_seconds": 60
 }
