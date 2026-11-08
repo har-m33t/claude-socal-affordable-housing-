@@ -1,25 +1,42 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { DEFAULT_CITY, PLAN, getCityConfig, loadMockEvents } from "@/components/pointer/config";
+import { DEFAULT_CITY, PLAN, getCityConfig } from "@/components/pointer/config";
 import { normalizeSource, type Citation } from "@/components/pointer/contract";
 import { documentById, stepIndexOf, type PlanTarget } from "@/components/pointer/plan";
-import { foldEvents, loadDecisions, readiness, withDecisions, type Decisions } from "@/components/pointer/run-state";
+import { readiness, type RunState } from "@/components/pointer/run-state";
 import { latestRun } from "@/components/pointer/last-run";
 import { CitationChip, StatusPill } from "@/components/ui/bits";
 
+// The editor's latest live run in this tab (in memory, decisions applied). With none,
+// the report says so: it never shows a run that did not happen.
 export function ReadinessReport() {
-  const city = getCityConfig(DEFAULT_CITY)!;
-  const [decisions, setDecisions] = useState<Decisions>({});
-  useEffect(() => setDecisions(loadDecisions()), []);
-
-  // The report is the end state of the whole run, folded with the same reducer the editor uses,
-  // over every plan target (checklist boxes, form fields, files, fee sheet), not just the checklist.
-  const scope = { checklist: PLAN.targets };
-  // The editor's latest run (live or recorded, with decisions already applied), else the recorded run.
   const last = latestRun();
-  const run = last ? last.run : withDecisions(foldEvents(loadMockEvents().events, scope), decisions);
-  const source = last ? (last.mode === "live" ? "from your live run" : "from the recorded run") : "from the recorded run (no run in this tab yet)";
+  return last ? <Report run={last.run} /> : <NoRunYet />;
+}
+
+function NoRunYet() {
+  return (
+    <article className="mx-auto w-full max-w-4xl px-4 py-8 md:px-6">
+      <h1 className="text-2xl">Readiness report</h1>
+      <div className="box anim-fade-up mt-6 p-6">
+        <p className="font-medium">No check yet in this tab.</p>
+        <p className="mt-1 text-sm text-[var(--fg-muted)]">
+          Run “Check my packet” in the editor and Claude will check your files against every step of the plan. This report
+          then shows what is complete, missing or unknown. Runs are kept in this tab only and are gone on reload.
+        </p>
+        <Link href="/" className="btn btn-primary mt-4 inline-flex">
+          ← Go to the editor
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+function Report({ run }: { run: RunState }) {
+  const city = getCityConfig(DEFAULT_CITY)!;
+  // The end state of the run, over every plan target (checklist boxes, form fields, files,
+  // fee sheet), not just the checklist.
+  const scope = { checklist: PLAN.targets };
   const r = readiness(run, scope);
   const byId = Object.fromEntries(PLAN.targets.map((t) => [t.id, t])) as Record<string, PlanTarget>;
   const total = PLAN.targets.length;
@@ -82,7 +99,7 @@ export function ReadinessReport() {
           </div>
         </div>
         <p className="mt-1 text-sm text-[var(--fg-muted)]">
-          {city.city} · ADU · {PLAN.steps.length} steps across {PLAN.documents.length} documents · checked {PLAN.checked_date ?? "unknown"} · {source}, with a made-up applicant.
+          {city.city} · ADU · {PLAN.steps.length} steps across {PLAN.documents.length} documents · checked {PLAN.checked_date ?? "unknown"} · from your latest live check, with a made-up applicant.
           This report is for you and your designer. Pointer does not submit it.
         </p>
       </div>

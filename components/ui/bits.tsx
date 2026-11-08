@@ -33,7 +33,3 @@ export function StatusPill({ status }: { status?: ItemStatus }) {
   if (!status) return <span className="pill pill-pending">Not reviewed</span>;
   return <span className={`pill pill-${status}`}>{STATUS_LABEL[status]}</span>;
 }
-
-export function MockTag({ children = "MOCK DATA" }: { children?: React.ReactNode }) {
-  return <span className="mock-tag">{children}</span>;
-}

@@ -7,7 +7,7 @@ import type { ItemStatus } from "@/components/pointer/contract";
 import { stepLabel, targetById, type Plan } from "@/components/pointer/plan";
 import type { LogEntry } from "@/components/pointer/run-state";
 import type { SidebarProps } from "@/components/pointer/ui-contract";
-import type { PlayState } from "@/components/pointer/use-replay";
+import type { PlayState } from "@/components/pointer/use-run";
 import {
   AskIcon,
   CheckIcon,
@@ -40,17 +40,16 @@ interface Props {
   onDecide: SidebarProps["onDecide"];
   onSelectTarget: (id: string) => void;
   onAskAboutStep: () => void;
-  runMode: SidebarProps["runMode"];
   runNote?: string;
 }
 
-export function PlanTab({ plan, view, log, play, controls, onDecide, onSelectTarget, onAskAboutStep, runMode, runNote }: Props) {
+export function PlanTab({ plan, view, log, play, controls, onDecide, onSelectTarget, onAskAboutStep, runNote }: Props) {
   const [showDone, setShowDone] = useState(false);
   const step = view.current;
 
   return (
     <div className="sb-plan">
-      <Controls play={play} started={view.started} controls={controls} runMode={runMode} />
+      <Controls play={play} controls={controls} />
       {runNote && (
         <p className="sb-run-note" title={runNote}>
           {runNote}
@@ -214,50 +213,40 @@ function TargetRowView({ row, onSelect }: { row: TargetRow; onSelect: (id: strin
   );
 }
 
-function Controls({
-  play,
-  started,
-  controls,
-  runMode,
-}: {
-  play: PlayState;
-  started: boolean;
-  controls: Props["controls"];
-  runMode: Props["runMode"];
-}) {
+// The live run starts from the editor's "Check my packet". These controls only
+// pace it: Pause holds the hand while the stream keeps buffering, Step applies
+// one queued action, Stop ends the run, Clear goes back to no check at all.
+function Controls({ play, controls }: { play: PlayState; controls: Props["controls"] }) {
   const playing = play === "playing";
-  // "Step once" before playing leaves the replay idle; mid-run that reads as paused.
-  const shown: PlayState = play === "idle" && started ? "paused" : play;
-  const ended = play === "done" || play === "stopped";
+  const running = playing || play === "paused";
   return (
     <div className="sb-controls" role="toolbar" aria-label="Run controls">
       <IconButton
-        label={playing ? "Pause" : shown === "paused" ? "Resume" : "Play"}
+        label={playing ? "Pause" : "Resume"}
         onClick={playing ? controls.pause : controls.start}
-        disabled={ended}
+        disabled={!running}
         primary
       >
         {playing ? <PauseIcon /> : <PlayIcon />}
       </IconButton>
-      <IconButton label="Step once" onClick={controls.step} disabled={ended}>
+      <IconButton label="Step once" onClick={controls.step} disabled={!running}>
         <StepIcon />
       </IconButton>
-      <IconButton label="Stop" onClick={controls.stop} disabled={(play === "idle" && !started) || ended}>
+      <IconButton label="Stop" onClick={controls.stop} disabled={!running}>
         <StopIcon />
       </IconButton>
-      <IconButton label="Restart" onClick={controls.reset} disabled={play === "idle" && !started}>
+      <IconButton label="Clear" onClick={controls.reset} disabled={play === "idle"}>
         <RestartIcon />
       </IconButton>
-      <span className={`sb-play-state sb-play-${shown}`} aria-live="polite">
+      <span className={`sb-play-state sb-play-${play}`} aria-live="polite">
         {playing && <span className="sb-live-dot" aria-hidden />}
-        {{ idle: "Ready", playing: "Running", paused: "Paused", stopped: "Stopped", done: "Done" }[shown]}
+        {{ idle: "Not run yet", playing: "Running", paused: "Paused", stopped: "Stopped", done: "Done" }[play]}
       </span>
-      <span
-        className={`sb-run-mode sb-run-mode-${runMode}`}
-        title={runMode === "live" ? "Claude reads the documents now, live" : "Replaying a run recorded earlier"}
-      >
-        {runMode === "live" ? "Live · Claude" : "Recorded run"}
-      </span>
+      {play !== "idle" && (
+        <span className="sb-run-mode sb-run-mode-live" title="Claude reads the documents now, live">
+          Live · Claude
+        </span>
+      )}
     </div>
   );
 }

@@ -134,8 +134,7 @@ export function isSafeUrl(url: string): boolean {
 export function parseEvent(raw: unknown): AgentEvent | null {
   if (!raw || typeof raw !== "object") return null;
   // The route streams a StreamFrame per `data:` line. An action frame is
-  // {type:"event", event:{...}}; unwrap it. A bare event is still accepted so
-  // fixtures/mock-events.json keeps working.
+  // {type:"event", event:{...}}; unwrap it. A bare event is accepted too.
   const frame = raw as { type?: unknown; event?: unknown };
   const source =
     frame.type === "event" && frame.event && typeof frame.event === "object"

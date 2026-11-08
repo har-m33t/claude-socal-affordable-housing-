@@ -18,6 +18,3 @@ export interface AddedDocument {
   /** How many personal details the redactor hid. */
   hidden: number;
 }
-
-/** Where a run's events come from. Shown to the homeowner; never implied. */
-export type RunMode = "live" | "recorded";

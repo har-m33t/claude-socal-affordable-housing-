@@ -237,7 +237,6 @@ export function Sidebar(props: SidebarProps) {
           onDecide={props.onDecide}
           onSelectTarget={props.onSelectTarget}
           onAskAboutStep={askAboutStep}
-          runMode={props.runMode}
           runNote={props.runNote}
         />
       </div>

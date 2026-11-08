@@ -137,32 +137,3 @@ export function readiness(state: RunState, city: TargetScope): Readiness {
   }
   return r;
 }
-
-// Accept/reject decisions survive the move from editor to report within a tab (sessionStorage).
-// That's a convenience only: the report still renders without it.
-const DECISIONS_KEY = "pointer:decisions";
-export type Decisions = Record<string, "accepted" | "rejected">;
-
-export function saveDecisions(state: RunState): void {
-  const d: Decisions = {};
-  for (const it of Object.values(state.items)) for (const s of it.suggestions) if (s.decision !== "pending") d[s.id] = s.decision;
-  try {
-    sessionStorage.setItem(DECISIONS_KEY, JSON.stringify(d));
-  } catch {}
-}
-
-export function loadDecisions(): Decisions {
-  try {
-    return JSON.parse(sessionStorage.getItem(DECISIONS_KEY) ?? "{}") as Decisions;
-  } catch {
-    return {};
-  }
-}
-
-export function withDecisions(state: RunState, d: Decisions): RunState {
-  const items: Record<string, ItemState> = {};
-  for (const [id, it] of Object.entries(state.items)) {
-    items[id] = { ...it, suggestions: it.suggestions.map((s) => (d[s.id] ? { ...s, decision: d[s.id] } : s)) };
-  }
-  return { ...state, items };
-}

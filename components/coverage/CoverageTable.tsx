@@ -69,8 +69,8 @@ export function CoverageTable() {
         </div>
       </div>
       <p className="mt-3 text-xs text-[var(--fg-muted)]">
-        City list: the 34 incorporated OC cities from the event bundle&apos;s <code>oc-cities.json</code>. Statuses are mock data until
-        the data team&apos;s city files land.
+        City list: the 34 incorporated OC cities from the event bundle&apos;s <code>oc-cities.json</code>. Each status comes from that
+        city&apos;s file in <code>data/cities/</code>.
       </p>
     </article>
   );

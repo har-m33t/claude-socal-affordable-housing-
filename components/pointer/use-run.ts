@@ -1,57 +1,45 @@
 "use client";
-// The plan run hook. One reducer (run-session.ts), two sources:
-//   playRecorded()  queues fixtures/plan-run.json and plays it on a timer
-//   startLive()     reads and redacts the packet, POSTs it to /api/agent and
-//                   queues events as the stream delivers them
-// A live run that cannot happen at all (no key, rate limited, offline) falls
-// back to the recording, and says so in `note`. A refusal never falls back.
+// The plan run hook. startLive() reads and redacts the packet, POSTs it to
+// /api/agent and queues events as the stream delivers them; one timer paces them
+// onto the page through the reducer in run-session.ts.
+//
+// There is only the live run. When it cannot happen at all (no key, rate
+// limited, offline), the run stays idle with nothing checked and `note` says why.
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { startLiveRun, type LiveRunEnd, type PreparedLiveRun } from "@/lib/live/run-client";
-import type { AgentEvent } from "./contract";
-import { recordedSession, runReducer, type QueuedItem, type RunSession } from "./run-session";
-import { saveDecisions, type TargetScope } from "./run-state";
+import { idleSession, runReducer, type QueuedItem } from "./run-session";
+import type { TargetScope } from "./run-state";
 
 export type { PlayState } from "./run-session";
 
-const MIN_GAP_MS = 700;
-const MAX_GAP_MS = 2600;
 /** Live events arrive in bursts (one model turn batches many calls); this paces the hand. */
 const LIVE_GAP_MS = 450;
+const FIRST_GAP_MS = 300;
 
-/** Delay before applying the item at the cursor. */
-function gapMs(s: RunSession, speed: number): number {
-  if (s.cursor === 0) return 300;
-  if (s.mode === "live") return LIVE_GAP_MS / speed;
-  const d = Date.parse(s.queue[s.cursor].event.ts) - Date.parse(s.queue[s.cursor - 1].event.ts);
-  return (Number.isFinite(d) ? Math.min(MAX_GAP_MS, Math.max(MIN_GAP_MS, d)) : 1400) / speed;
-}
-
+export const IDLE_NOTE = "Press “Check my packet” to have Claude check your files.";
+export const PREPARING_NOTE = "Live: reading and redacting your packet…";
 export const LIVE_NOTE = "Live: Claude is checking your packet now.";
 export const STOPPED_NOTE = "Stopped. The steps checked so far are kept.";
 
-function endNote(end: Exclude<LiveRunEnd, { kind: "fallback" }>): string {
+function endNote(end: Exclude<LiveRunEnd, { kind: "unavailable" }>): string {
   if (end.kind === "done") return "Live run finished.";
   if (end.kind === "refused") return `Refused: ${end.note}`;
   return end.note;
 }
 
-export function useRun(scope: TargetScope | undefined, recorded: AgentEvent[], speed = 1) {
-  const [s, dispatch] = useReducer(runReducer, recorded, (events) => recordedSession(events));
+export function useRun(scope: TargetScope | undefined, speed = 1) {
+  const [s, dispatch] = useReducer(runReducer, undefined, () => idleSession());
   const live = useRef<AbortController | null>(null);
 
-  // One timer drains the queue for both sources. It depends on the cursor, not
-  // the queue, so a burst of live pushes does not keep resetting it.
+  // One timer drains the queue. It depends on the cursor, not the queue, so a
+  // burst of pushes does not keep resetting it.
   const pending = s.play === "playing" && s.cursor < s.queue.length;
-  const gap = pending ? gapMs(s, speed) : 0;
+  const gap = pending ? (s.cursor === 0 ? FIRST_GAP_MS : LIVE_GAP_MS / speed) : 0;
   useEffect(() => {
     if (!pending || !scope) return;
     const t = setTimeout(() => dispatch({ type: "advance", scope }), gap);
     return () => clearTimeout(t);
   }, [pending, gap, s.cursor, scope]);
-
-  useEffect(() => {
-    saveDecisions(s.run);
-  }, [s.run]);
 
   // Leaving the page ends a live run.
   useEffect(() => () => live.current?.abort(), []);
@@ -63,21 +51,13 @@ export function useRun(scope: TargetScope | undefined, recorded: AgentEvent[], s
     return was;
   }, []);
 
-  const playRecorded = useCallback(
-    (note?: string) => {
-      cancelLive();
-      dispatch({ type: "begin", mode: "recorded", queue: recordedSession(recorded).queue, play: "playing", note });
-    },
-    [cancelLive, recorded],
-  );
-
   const startLive = useCallback(
     async (prepare: (signal: AbortSignal) => Promise<PreparedLiveRun>) => {
       cancelLive();
       const ctl = new AbortController();
       live.current = ctl;
       const current = () => live.current === ctl;
-      dispatch({ type: "begin", mode: "live", queue: [], play: "playing", note: "Live: reading and redacting your packet…" });
+      dispatch({ type: "begin", play: "playing", note: PREPARING_NOTE });
 
       let prepared: PreparedLiveRun;
       try {
@@ -86,13 +66,7 @@ export function useRun(scope: TargetScope | undefined, recorded: AgentEvent[], s
         if (!current()) return;
         live.current = null;
         const why = err instanceof Error ? err.message : "unknown error";
-        dispatch({
-          type: "begin",
-          mode: "recorded",
-          queue: recordedSession(recorded).queue,
-          play: "playing",
-          note: `Could not read the packet (${why}), so playing the recorded run instead.`,
-        });
+        dispatch({ type: "begin", play: "idle", note: `Could not read the packet (${why}). Nothing was run.` });
         return;
       }
       if (!current()) return;
@@ -112,13 +86,10 @@ export function useRun(scope: TargetScope | undefined, recorded: AgentEvent[], s
       if (!current()) return; // stopped, reset or superseded meanwhile
       ctl.abort(); // release the response body; the server's run ends with it
       live.current = null;
-      if (end.kind === "fallback") {
-        playRecorded(end.note);
-      } else {
-        dispatch({ type: "finish", final: end.kind === "done" ? "done" : "stopped", note: endNote(end) });
-      }
+      if (end.kind === "unavailable") dispatch({ type: "begin", play: "idle", note: end.note });
+      else dispatch({ type: "finish", final: end.kind === "done" ? "done" : "stopped", note: endNote(end) });
     },
-    [cancelLive, playRecorded, recorded],
+    [cancelLive],
   );
 
   const step = useCallback(() => {
@@ -132,7 +103,6 @@ export function useRun(scope: TargetScope | undefined, recorded: AgentEvent[], s
     cursor: s.cursor,
     total: s.queue.length,
     play: s.play,
-    mode: s.mode,
     note: s.note,
     start: useCallback(() => dispatch({ type: "play" }), []),
     pause: useCallback(() => dispatch({ type: "pause" }), []),
@@ -143,9 +113,8 @@ export function useRun(scope: TargetScope | undefined, recorded: AgentEvent[], s
     }, [cancelLive]),
     reset: useCallback(() => {
       cancelLive();
-      dispatch({ type: "begin", mode: "recorded", queue: recordedSession(recorded).queue, play: "idle" });
-    }, [cancelLive, recorded]),
-    playRecorded,
+      dispatch({ type: "begin", play: "idle" });
+    }, [cancelLive]),
     startLive,
     decide: useCallback(
       (itemId: string, suggestionId: string, decision: "accepted" | "rejected") =>

@@ -66,12 +66,12 @@ describe("startLiveRun: SSE frames", () => {
     expect(signals.filter((s) => s.kind === "event")).toHaveLength(1);
   });
 
-  it("a refusal ends the run with its reason and never falls back", async () => {
+  it("a refusal ends the run with its reason", async () => {
     const { end } = await run(sse([point, { type: "refusal", reason: "The model declined." }, { type: "status", phase: "stopped" }]));
     expect(end).toEqual({ kind: "refused", note: "The model declined." });
   });
 
-  it("an unverified city is a refusal, not a fallback to the recording", async () => {
+  it("an unverified city is a refusal, not 'unavailable'", async () => {
     const { end } = await run(
       sse([
         { type: "status", phase: "started" },
@@ -87,9 +87,9 @@ describe("startLiveRun: SSE frames", () => {
     expect(end).toEqual({ kind: "stopped", note: "Stopped: step cap reached (12 steps)." });
   });
 
-  it("an error before any event falls back; after events it stops and keeps them", async () => {
+  it("an error before any event means nothing was checked; after events it stops and keeps them", async () => {
     const before = await run(sse([{ type: "status", phase: "started" }, { type: "error", code: "api_500", message: "m" }]));
-    expect(before.end).toMatchObject({ kind: "fallback", note: expect.stringContaining("recorded run") });
+    expect(before.end).toEqual({ kind: "unavailable", note: "The live run failed (api_500) before anything was checked." });
     const after = await run(sse([point, { type: "error", code: "api_500", message: "m" }]));
     expect(after.end).toMatchObject({ kind: "stopped", note: expect.stringContaining("api_500") });
   });
@@ -100,26 +100,32 @@ describe("startLiveRun: SSE frames", () => {
   });
 });
 
-describe("startLiveRun: HTTP failures fall back to the recorded run, honestly", () => {
+describe("startLiveRun: HTTP failures are 'unavailable': nothing runs, and the note says why", () => {
   it("503 no_api_key", async () => {
-    const { end } = await run(json(503, { error: "no_api_key", message: "..." }));
-    expect(end).toEqual({ kind: "fallback", note: "No API key on the server, so playing the recorded run instead." });
+    const { end, signals } = await run(json(503, { error: "no_api_key", message: "..." }));
+    expect(end).toEqual({ kind: "unavailable", note: "Live checks need ANTHROPIC_API_KEY on the server. Nothing was run." });
+    expect(signals).toEqual([]);
+  });
+
+  it("missing_api_key as a stream error", async () => {
+    const { end } = await run(sse([{ type: "error", code: "missing_api_key", message: "m" }]));
+    expect(end).toEqual({ kind: "unavailable", note: "Live checks need ANTHROPIC_API_KEY on the server. Nothing was run." });
   });
 
   it("429 with retry time", async () => {
     const { end } = await run(json(429, { error: "rate_limited", retry_after_ms: 41_200 }));
-    expect(end).toEqual({ kind: "fallback", note: "Rate limited, so playing the recorded run instead. Try live again in about 42s." });
+    expect(end).toEqual({ kind: "unavailable", note: "Rate limited. Nothing was run. Try again in about 42s." });
   });
 
   it("5xx and network errors", async () => {
-    expect((await run(new Response("boom", { status: 502 }))).end).toMatchObject({ kind: "fallback", note: expect.stringContaining("502") });
+    expect((await run(new Response("boom", { status: 502 }))).end).toEqual({ kind: "unavailable", note: "The server answered 502. Nothing was run." });
     const offline = await run(() => Promise.reject(new TypeError("Failed to fetch")));
-    expect(offline.end).toMatchObject({ kind: "fallback", note: expect.stringContaining("Could not reach the server") });
+    expect(offline.end).toEqual({ kind: "unavailable", note: "Could not reach the server. Nothing was run." });
   });
 });
 
 describe("startLiveRun: abort", () => {
-  it("aborting mid-stream stops the run (no fallback) and keeps what arrived", async () => {
+  it("aborting mid-stream stops the run and keeps what arrived", async () => {
     const ctl = new AbortController();
     const enc = new TextEncoder();
     let push: ((s: string) => void) | undefined;
@@ -147,7 +153,7 @@ describe("startLiveRun: abort", () => {
     expect(signals.filter((s) => s.kind === "event")).toHaveLength(1);
   });
 
-  it("aborting before the response arrives is a stop, not an offline fallback", async () => {
+  it("aborting before the response arrives is a stop, not 'offline'", async () => {
     const ctl = new AbortController();
     ctl.abort();
     const end = await startLiveRun(REQ, () => {}, ctl.signal, (async () => {

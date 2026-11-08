@@ -13,14 +13,11 @@
 import typeAdu from "@/data/types/adu.json";
 import typesFixture from "@/fixtures/mock-types.json";
 import packetManifest from "@/data/packet/manifest.json";
-import planRunFixture from "@/fixtures/plan-run.json";
 import planAnaheimAdu from "@/data/plans/anaheim-adu.json";
 import { checkPlan, type Plan } from "./plan";
 import {
   isSafeUrl,
   normalizeSource,
-  parseEvent,
-  type AgentEvent,
   type ChecklistItem,
   type CityConfig,
   type CoverageRow,
@@ -438,19 +435,6 @@ export const PACKET_FILES: PacketFile[] = packetManifest.files as PacketFile[];
  */
 export const DEFAULT_CITY: string = VERIFIED_CITIES[0] ?? CITY_NAMES[0] ?? "";
 export const DEFAULT_TYPE = "adu";
-
-/** The scripted plan run (fixtures/plan-run.json), validated. Malformed rows are dropped and counted so the UI can show it. */
-export function loadMockEvents(): { events: AgentEvent[]; dropped: number } {
-  const raw = (planRunFixture as { events: unknown[] }).events;
-  const events: AgentEvent[] = [];
-  let dropped = 0;
-  for (const r of raw) {
-    const e = parseEvent(r);
-    if (e) events.push(e);
-    else dropped++;
-  }
-  return { events, dropped };
-}
 
 /** The multi-step plan for the default city and type. Invalid plans throw at load. */
 export const PLAN: Plan = (() => {
