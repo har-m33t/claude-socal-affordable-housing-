@@ -172,21 +172,6 @@ h3 {
   outline: 2px solid var(--accent);
   outline-offset: 0;
 }
-/* GitHub "Label": outlined, rounded. Used for SCRIPTED RUN / MOCK DATA. */
-.mock-tag {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--border);
-  color: var(--fg-muted);
-  background: var(--bg);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 18px;
-  letter-spacing: 0.02em;
-  padding: 0 7px;
-  white-space: nowrap;
-}
 
 /* ---------- controls (Primer Button) ---------- */
 .btn {

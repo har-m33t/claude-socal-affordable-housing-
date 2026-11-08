@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "../../app/api/agent/route";
 import { PACKET_FILES, PLAN } from "../../components/pointer/config";
-import { runReducer, recordedSession, type RunSession } from "../../components/pointer/run-session";
+import { idleSession, runReducer, type RunSession } from "../../components/pointer/run-session";
 import { preparePacketRun } from "../../lib/live/packet";
 import { startLiveRun, type LiveRunSignal } from "../../lib/live/run-client";
 import { FakeAnthropic, type FakeBlock, type FakeScript } from "../security/helpers/fake-anthropic";
@@ -96,7 +96,7 @@ describe("live plan run, end to end against the fake Anthropic API", () => {
 
     // Fold exactly as the editor does: queue, then drain.
     const scope = { checklist: PLAN.targets };
-    let s: RunSession = runReducer(recordedSession([]), { type: "begin", mode: "live", queue: [], play: "playing" });
+    let s: RunSession = runReducer(idleSession(), { type: "begin", play: "playing" });
     for (const sig of signals) {
       if (sig.kind === "status") continue;
       const event = sig.event.text === undefined ? sig.event : { ...sig.event, text: prepared.restore!(sig.event.text) };
