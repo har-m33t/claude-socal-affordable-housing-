@@ -1,8 +1,7 @@
 /**
  * Lane `agent-loop` tests.
  *
- * No network, and no dependency on lib/agent/{tools,verifier,recorder,replay}.ts
- * - every one of those arrives as an injected stub. If these tests ever need a
+ * No network, and no dependency on lib/agent/{tools,verifier}.ts - every one of those arrives as an injected stub. If these tests ever need a
  * file another lane owns, the injection seam has been broken.
  */
 import type Anthropic from "@anthropic-ai/sdk";
@@ -15,7 +14,6 @@ import {
   readApiKey,
   readCaps,
   readRateLimit,
-  recordingEnabled,
   trustProxyHeaders,
 } from "../../lib/agent/config";
 import type { AgentRunDeps, AnthropicClientLike, ToolsLike, VerifierLike } from "../../lib/agent/loop";
@@ -226,7 +224,6 @@ afterEach(() => {
   delete process.env.POINTER_MAX_STEPS;
   delete process.env.POINTER_MAX_TOKENS;
   delete process.env.POINTER_HANDBOOK_PDF;
-  delete process.env.POINTER_ALLOW_RECORD;
   delete process.env.POINTER_RATE_LIMIT_MAX;
   delete process.env.POINTER_RATE_LIMIT_WINDOW_MS;
   delete process.env.POINTER_RATE_LIMIT_GLOBAL_MAX;
@@ -618,108 +615,6 @@ describe("the request sent to the API", () => {
   });
 });
 
-// ================================================================== replay
-
-describe("replay mode", () => {
-  const recorded: StreamFrame[] = [
-    { type: "status", phase: "started", detail: "recorded run" },
-    { type: "event", event: ACCEPT_EVENT },
-    { type: "status", phase: "done" },
-  ];
-
-  it("emits exactly the recorded frames and never builds a client", async () => {
-    const createClient = vi.fn();
-    const loadCity = vi.fn();
-    const frames = await collect(
-      runAgent(request({ replay: true }), {
-        appRoot: APP_ROOT,
-        loadReplay: async () => recorded,
-        createClient: createClient as unknown as AgentRunDeps["createClient"],
-        loadCity: loadCity as unknown as AgentRunDeps["loadCity"],
-      }),
-    );
-    expect(frames).toEqual(recorded);
-    expect(createClient).not.toHaveBeenCalled();
-    // Replay does not even touch the city config.
-    expect(loadCity).not.toHaveBeenCalled();
-  });
-
-  it("works with no API key at all", async () => {
-    process.env.ANTHROPIC_API_KEY = "";
-    const frames = await collect(
-      runAgent(request({ replay: true }), {
-        appRoot: APP_ROOT,
-        loadReplay: async () => recorded,
-      }),
-    );
-    expect(frames).toEqual(recorded);
-  });
-
-  it("reads fixtures/replay.json by default", async () => {
-    const loadReplay = vi.fn(async () => recorded);
-    await collect(runAgent(request({ replay: true }), { appRoot: APP_ROOT, loadReplay }));
-    expect(loadReplay).toHaveBeenCalledWith(nodePath.join(APP_ROOT, "fixtures", "replay.json"));
-  });
-
-  it("reports a missing replay reader rather than falling back to a live run", async () => {
-    const createClient = vi.fn();
-    const frames = await collect(
-      runAgent(request({ replay: true }), {
-        appRoot: APP_ROOT,
-        loadReplay: (() => {
-          throw new Error("no replay file");
-        }) as unknown as AgentRunDeps["loadReplay"],
-        createClient: createClient as unknown as AgentRunDeps["createClient"],
-      }),
-    );
-    expect(createClient).not.toHaveBeenCalled();
-    expect(frames.find((f) => f.type === "error")).toMatchObject({ code: "replay_read_failed" });
-  });
-});
-
-// ================================================================ recording
-
-describe("recording", () => {
-  it("feeds every frame to the recorder and saves once at the end", async () => {
-    const recorded: StreamFrame[] = [];
-    const save = vi.fn(async () => "fixtures/replay.json");
-    const stub = stubClient([
-      message("tool_use", [toolUse("tu_1", "mark_item", { item_id: "item-1" })]),
-      message("end_turn"),
-    ]);
-    const frames = await collect(
-      runAgent(
-        request({ record: true }),
-        liveDeps({
-          createClient: async () => stub.client,
-          recorder: () => ({ record: (f) => recorded.push(f), save }),
-        }),
-      ),
-    );
-    expect(recorded).toEqual(frames);
-    expect(save).toHaveBeenCalledTimes(1);
-  });
-
-  it("reports a failed save instead of swallowing it", async () => {
-    const frames = await collect(
-      runAgent(
-        request({ record: true, replay: true }),
-        {
-          appRoot: APP_ROOT,
-          loadReplay: async () => [{ type: "status", phase: "done" }],
-          recorder: () => ({
-            record: () => undefined,
-            save: async () => {
-              throw new Error("disk full");
-            },
-          }),
-        },
-      ),
-    );
-    expect(frames[frames.length - 1]).toMatchObject({ type: "error", code: "record_failed" });
-  });
-});
-
 // ================================================================ SSE wire
 
 describe("SSE framing", () => {
@@ -825,12 +720,10 @@ describe("the API key", () => {
       "POINTER_MAX_STEPS",
       "POINTER_MAX_TOKENS",
       "POINTER_HANDBOOK_PDF",
-      "POINTER_ALLOW_RECORD",
       "POINTER_RATE_LIMIT_MAX",
       "POINTER_RATE_LIMIT_WINDOW_MS",
       "POINTER_RATE_LIMIT_GLOBAL_MAX",
       "POINTER_TRUST_PROXY",
-      "NODE_ENV",
     ]);
     let keyReads = 0;
     for (const file of files) {
@@ -1013,60 +906,31 @@ describe("the system prompt", () => {
   });
 });
 
-// ========================================================= recording is ours
+// ===================================================== there is no replay mode
 
-describe("recording is server-side only", () => {
-  it("rejects a body carrying record as an unknown key, rather than ignoring it", async () => {
-    const res = await post({
-      city: "fixture-city",
-      projectType: "adu",
-      question: "q",
-      record: true,
-    });
+describe("there is no replay mode", () => {
+  it("rejects a body carrying replay as an unknown key, naming the key", async () => {
+    const res = await post({ city: "fixture-city", projectType: "adu", question: "q", replay: true });
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string; issues: Array<{ path: string }> };
+    const body = (await res.json()) as { error: string; issues: Array<{ path: string; message: string }> };
     expect(body.error).toBe("invalid_request");
-    expect(body.issues.some((i) => i.path === "record" || i.path === "")).toBe(true);
+    expect(body.issues.some((i) => i.message.includes("replay"))).toBe(true);
   });
 
-  it("also rejects record: false - the field simply does not exist", async () => {
-    const res = await post({
-      city: "fixture-city",
-      projectType: "adu",
-      question: "q",
-      record: false,
-    });
+  it("does not let replay stand in for a missing key: still 400, never a stream", async () => {
+    process.env.ANTHROPIC_API_KEY = "";
+    const res = await post({ city: "fixture-city", projectType: "adu", question: "q", replay: true });
     expect(res.status).toBe(400);
+    expect(res.headers.get("Content-Type")).not.toContain("text/event-stream");
   });
 
-  it("constructs no recorder when record is not set", async () => {
-    const recorder = vi.fn();
-    const stub = stubClient([message("end_turn")]);
-    await collect(
-      runAgent(
-        request(),
-        liveDeps({
-          createClient: async () => stub.client,
-          recorder: recorder as unknown as AgentRunDeps["recorder"],
-        }),
-      ),
-    );
-    expect(recorder).not.toHaveBeenCalled();
-  });
-
-  it("is off unless the operator sets POINTER_ALLOW_RECORD=1 outside production", () => {
-    expect(recordingEnabled()).toBe(false);
-    process.env.POINTER_ALLOW_RECORD = "1";
-    expect(recordingEnabled()).toBe(true);
-    vi.stubEnv("NODE_ENV", "production");
-    expect(recordingEnabled()).toBe(false);
-  });
-
-  it("does not treat any other POINTER_ALLOW_RECORD value as on", () => {
-    for (const value of ["true", "yes", "0", "", "TRUE"]) {
-      process.env.POINTER_ALLOW_RECORD = value;
-      expect(recordingEnabled(), `value: ${JSON.stringify(value)}`).toBe(false);
-    }
+  it("answers 503 no_api_key for a valid body when the key is missing", async () => {
+    process.env.ANTHROPIC_API_KEY = "";
+    const res = await post({ city: "fixture-city", projectType: "adu", question: "q" });
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string; message: string };
+    expect(body.error).toBe("no_api_key");
+    expect(body.message).not.toMatch(/replay|record/i);
   });
 });
 
@@ -1180,7 +1044,7 @@ describe("the route's rate limit", () => {
     };
     expect(body.error).toBe("rate_limited");
     expect(body.retry_after_ms).toBeGreaterThan(0);
-    expect(body.message).toContain("replay");
+    expect(body.message).not.toContain("replay");
   });
 
   it("limits each client separately when a proxy is trusted", async () => {
@@ -1193,15 +1057,6 @@ describe("the route's rate limit", () => {
     expect((await post(live, { "x-forwarded-for": "198.51.100.1" })).status).toBe(429);
     // A different client still has its full allowance.
     expect((await post(live, { "x-forwarded-for": "198.51.100.2" })).status).toBe(200);
-  });
-
-  it("never rate-limits a replay run", async () => {
-    const replay = { ...live, replay: true };
-    for (let i = 0; i < 10; i += 1) {
-      expect((await post(replay, headers)).status).toBe(200);
-    }
-    // ...and a replay run does not consume the live allowance either.
-    expect((await post(live, headers)).status).toBe(200);
   });
 
   it("does not spend the allowance on a request that never reaches the agent", async () => {
@@ -1396,17 +1251,6 @@ describe("the route's global rate limit", () => {
       expect(res.status, `rotation ${i}`).toBe(429);
       expect(((await res.json()) as { error: string }).error).toBe("rate_limited_global");
     }
-  });
-
-  it("exempts replay runs from the global cap as well", async () => {
-    const replay = { ...live, replay: true };
-    for (let i = 0; i < 12; i += 1) {
-      expect((await post(replay, { "x-forwarded-for": `198.51.100.${i}` })).status).toBe(200);
-    }
-    // The global allowance was never touched.
-    expect((await post(live, { "x-forwarded-for": "198.51.100.50" })).status).toBe(200);
-    expect((await post(live, { "x-forwarded-for": "198.51.100.51" })).status).toBe(200);
-    expect((await post(live, { "x-forwarded-for": "198.51.100.52" })).status).toBe(429);
   });
 
   it("distinguishes one noisy client from the whole app at its ceiling", async () => {
@@ -1729,13 +1573,12 @@ describe("the statute table", () => {
 // ============================================================== body contract
 
 describe("the request body contract", () => {
-  it("accepts city, projectType, question, documents and replay", async () => {
+  it("accepts city, projectType, question and documents", async () => {
     const res = await post({
       city: "fixture-city",
       projectType: "adu",
       question: "What is missing?",
       documents: [{ name: "site-plan.pdf", declared_type: "site_plan", text: "redacted text" }],
-      replay: false,
     });
     expect(res.status).toBe(200);
   });
@@ -1749,6 +1592,9 @@ describe("the request body contract", () => {
     ["type", { type: "adu" }],
     ["packet", { packet: { applicant: "x", synthetic: true, files: [] } }],
     ["record", { record: true }],
+    ["record: false", { record: false }],
+    ["replay", { replay: true }],
+    ["replay: false", { replay: false }],
     ["statute_ref", { statute_ref: { id: "adu-core" } }],
   ] as Array<[string, Record<string, unknown>]>) {
     it(`rejects ${label} as an unknown key`, async () => {

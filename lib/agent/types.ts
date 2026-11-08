@@ -174,7 +174,7 @@ export type VerifyResult =
   | { ok: true; event: AgentEvent }
   | { ok: false; reason: string };
 
-/** Lane 3 (lib/agent/verifier.ts, recorder.ts, replay.ts) exports these. */
+/** Lane 3 (lib/agent/verifier.ts) exports these. */
 export interface VerifierModule {
   verifyEvent(event: AgentEvent, statutes: StatuteEntry[]): VerifyResult;
   looksLikeLawClaim(text: string): boolean;
@@ -182,12 +182,6 @@ export interface VerifierModule {
   loadStatuteTable(raw: unknown): StatuteEntry[];
   /** Fails closed: unknown or unconfirmed id resolves to an error. */
   resolveStatuteId(id: string, statutes: StatuteEntry[]): StatuteResolution;
-}
-
-export interface RecorderHandle {
-  record(frame: StreamFrame): void;
-  /** Writes fixtures/replay.json and returns the path written. */
-  save(): Promise<string>;
 }
 
 // ---------------------------------------------------------------- run
@@ -202,10 +196,6 @@ export interface AgentRunRequest {
    * already had names, addresses and APNs tokenized.
    */
   documents?: Array<{ name: string; declared_type: string; text: string }>;
-  /** When true, stream fixtures/replay.json instead of calling the API. */
-  replay?: boolean;
-  /** When true, write a replay file for this run. */
-  record?: boolean;
 }
 
 export interface AgentCaps {
