@@ -41,10 +41,7 @@ __pycache__/
 *.pyc
 .venv/
 
-# Hackathon bundle: contents of claude-impact-lab-uci-main.zip.
-# Unpacked locally for reference; the zip is the tracked copy, so every
-# extracted file stays untracked. Re-extract with:
-#   unzip -q claude-impact-lab-uci-main.zip -d .
+# Old reference bundle, no longer tracked; keep any local copy out of git.
 claude-impact-lab-uci-main/
 node_modules
 

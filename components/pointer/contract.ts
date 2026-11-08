@@ -1,5 +1,5 @@
 // PROVISIONAL types, written by the UI lane (Team 2) from the shapes in
-// docs/pointer-adu-copilot-build-plan.md, because contracts/*.schema.json had not
+// the planned shapes, because contracts/*.schema.json had not
 // landed on origin/main at 12:00. When contracts/ lands, check these against it and
 // change this file only. Every component imports its types from here.
 
@@ -134,8 +134,7 @@ export function isSafeUrl(url: string): boolean {
 export function parseEvent(raw: unknown): AgentEvent | null {
   if (!raw || typeof raw !== "object") return null;
   // The route streams a StreamFrame per `data:` line. An action frame is
-  // {type:"event", event:{...}}; unwrap it. A bare event is still accepted so
-  // fixtures/mock-events.json keeps working.
+  // {type:"event", event:{...}}; unwrap it. A bare event is accepted too.
   const frame = raw as { type?: unknown; event?: unknown };
   const source =
     frame.type === "event" && frame.event && typeof frame.event === "object"

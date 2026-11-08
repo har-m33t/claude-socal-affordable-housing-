@@ -4,19 +4,18 @@
  * Shape: `runAgent(request, deps)` is an async generator of StreamFrame. The
  * route pipes it into SSE; a test drives it directly. Everything the loop does
  * not own - the five tools, the input validator, the citation verifier, the
- * recorder, the replay reader, the Anthropic client - arrives as an injected
+ * Anthropic client - arrives as an injected
  * dependency with a lazy default, so this file compiles and its tests pass
  * with the other lanes' files absent.
  *
  * Hard rules this file enforces, in order:
- *  1. replay runs never construct an Anthropic client;
- *  2. a city or project-type pack with verified:false produces a refusal and
+ *  1. a city or project-type pack with verified:false produces a refusal and
  *     no advice, checked before anything else and before any API call;
- *  3. the API key comes from config.readApiKey() and nowhere else;
- *  4. no tool_use block is trusted: every input goes through
+ *  2. the API key comes from config.readApiKey() and nowhere else;
+ *  3. no tool_use block is trusted: every input goes through
  *     validateToolInput, every resulting event through verifyEvent;
- *  5. all tool results for one assistant turn go back in ONE user message;
- *  6. the loop stops at caps.maxSteps, on refusal, on abort.
+ *  4. all tool results for one assistant turn go back in ONE user message;
+ *  5. the loop stops at caps.maxSteps, on refusal, on abort.
  */
 import type Anthropic from "@anthropic-ai/sdk";
 import { APIError } from "@anthropic-ai/sdk";
@@ -34,9 +33,8 @@ import { verifyEvent } from "./verifier";
 // off the namespace keeps this lane compiling before they exist, and picks up
 // the real functions the moment they land. Both paths FAIL CLOSED when absent.
 import * as verifierModule from "./verifier";
-import { createRecorder } from "./recorder";
-import { loadReplay } from "./replay";
 import { loadPlansForCity, mergePlanTargets } from "../plan/load";
+import type { Plan } from "../../components/pointer/plan";
 
 import {
   DEFAULT_EFFORT,
@@ -44,7 +42,6 @@ import {
   readApiKey,
   readCaps,
   readHandbookPdfPath,
-  REPLAY_PATH,
 } from "./config";
 import { buildSystemBlocks, buildUserContent } from "./prompt";
 import type { AgentDocument } from "./prompt";
@@ -54,7 +51,6 @@ import type {
   AgentRunRequest,
   CityConfig,
   ProjectTypePack,
-  RecorderHandle,
   StatuteEntry,
   StatuteResolution,
   StreamFrame,
@@ -63,8 +59,8 @@ import type {
 } from "./types";
 
 // ----------------------------------------------------------- lane interfaces
-// Local structural aliases, NOT imports: lib/agent/{tools,verifier,recorder,
-// replay}.ts belong to other lanes and may not exist yet. The shapes below are
+// Local structural aliases, NOT imports: lib/agent/{tools,verifier}.ts
+// belong to other lanes and may not exist yet. The shapes below are
 // the frozen signatures from types.ts.
 
 /** lib/agent/tools.ts (lane `agent-tools`). */
@@ -85,12 +81,6 @@ export interface VerifierLike {
   /** Accepts a bare array or Team 1's {about, statutes:[...]} wrapper. */
   loadStatuteTable?: (raw: unknown) => StatuteEntry[];
 }
-
-/** lib/agent/recorder.ts (lane `agent-verifier`). */
-export type RecorderFactory = () => RecorderHandle | Promise<RecorderHandle>;
-
-/** lib/agent/replay.ts (lane `agent-verifier`). */
-export type ReplayLoader = (path: string) => Promise<StreamFrame[]>;
 
 /** The slice of the Anthropic client this loop uses. Stubbable in a test. */
 export interface MessageStreamLike {
@@ -127,19 +117,23 @@ export interface AgentRunInput extends Omit<AgentRunRequest, "packet"> {
 export interface AgentRunDeps {
   tools?: ToolsLike;
   verifier?: VerifierLike;
-  recorder?: RecorderFactory;
-  loadReplay?: ReplayLoader;
   createClient?: ClientFactory;
+  /**
+   * Loads the city file. When injected, its checklist is used as given and
+   * plans come only from `loadPlans` (none when that is absent too), so a test
+   * that injects a city controls the whole item_id allowlist.
+   */
   loadCity?: (city: string) => Promise<CityConfig>;
+  /** The city's step-by-step plans. Defaults to data/plans/<slug>-*.json. */
+  loadPlans?: (city: string) => Promise<Plan[]>;
   loadPack?: (projectType: string) => Promise<ProjectTypePack>;
   loadStatutes?: () => Promise<StatuteEntry[]>;
   readHandbook?: () => Promise<HandbookAttachment | null>;
   caps?: AgentCaps;
   signal?: AbortSignal;
   now?: () => string;
-  /** Root that data/ and fixtures/ hang off. Defaults to process.cwd(). */
+  /** Root that data/ hangs off. Defaults to process.cwd(). */
   appRoot?: string;
-  replayPath?: string;
   model?: string;
 }
 
@@ -163,8 +157,6 @@ const LANE_VERIFIER: VerifierLike = {
     ? { loadStatuteTable: LANE_EXTRAS.loadStatuteTable }
     : {}),
 };
-const LANE_REPLAY: ReplayLoader = loadReplay;
-const LANE_RECORDER: RecorderFactory = createRecorder;
 
 // ----------------------------------------------------------------- data load
 
@@ -189,10 +181,19 @@ async function readJsonFile<T>(file: string): Promise<T> {
  * verified flag, sources and fast paths come from the city file alone.
  */
 export async function loadCityFromDisk(appRoot: string, city: string): Promise<CityConfig> {
+  return (await loadCityWithPlans(appRoot, city)).city;
+}
+
+/** The merged city and the plans it was merged with: the prompt walks the plans. */
+export async function loadCityWithPlans(
+  appRoot: string,
+  city: string,
+): Promise<{ city: CityConfig; plans: Plan[] }> {
   const slug = slugify(city);
   if (!SLUG.test(slug)) throw new Error("unusable city name");
   const config = await readJsonFile<CityConfig>(nodePath.join(appRoot, "data", "cities", `${slug}.json`));
-  return mergePlanTargets(config, await loadPlansForCity(appRoot, slug));
+  const plans = await loadPlansForCity(appRoot, slug);
+  return { city: mergePlanTargets(config, plans), plans };
 }
 
 export async function loadPackFromDisk(
@@ -248,7 +249,7 @@ export async function readHandbookFromDisk(appRoot: string): Promise<HandbookAtt
   }
 }
 
-/** Default client factory. Only ever called on a non-replay run with a key. */
+/** Default client factory. Only ever called once a key is present. */
 const defaultClientFactory: ClientFactory = async (apiKey: string) => {
   const mod = await import("@anthropic-ai/sdk");
   const Ctor = mod.default;
@@ -352,40 +353,10 @@ function onlyContractFields(event: AgentEvent): AgentEvent {
 
 // ------------------------------------------------------------------- the run
 
-/**
- * Run the agent. Yields every frame the browser should see.
- *
- * Recording wraps the core so that a recorded replay contains exactly the
- * frames the live run produced, in order.
- */
+/** Run the agent. Yields every frame the browser should see. */
 export async function* runAgent(
   request: AgentRunInput,
   deps: AgentRunDeps = {},
-): AsyncGenerator<StreamFrame, void, void> {
-  let recorder: RecorderHandle | null = null;
-  if (request.record === true) {
-    const factory = deps.recorder ?? LANE_RECORDER;
-    recorder = await factory();
-  }
-
-  for await (const frame of runCore(request, deps)) {
-    recorder?.record(frame);
-    yield frame;
-  }
-
-  if (recorder !== null) {
-    try {
-      await recorder.save();
-    } catch {
-      // Never silent: a failed recording is reported, not swallowed.
-      yield error("record_failed", "The run finished but the replay file could not be written.");
-    }
-  }
-}
-
-async function* runCore(
-  request: AgentRunInput,
-  deps: AgentRunDeps,
 ): AsyncGenerator<StreamFrame, void, void> {
   const appRoot = deps.appRoot ?? process.cwd();
   const signal = deps.signal;
@@ -397,34 +368,18 @@ async function* runCore(
   const caps = deps.caps ?? readCaps();
   const model = deps.model ?? MODEL;
 
-  // --- replay: deterministic, offline, and no client is ever constructed.
-  if (request.replay === true) {
-    const loader = deps.loadReplay ?? LANE_REPLAY;
-    let frames: StreamFrame[];
-    try {
-      frames = await loader(deps.replayPath ?? nodePath.join(appRoot, REPLAY_PATH));
-    } catch {
-      yield error("replay_read_failed", "The replay file could not be read.");
-      return;
-    }
-    for (const frame of frames) {
-      if (aborted()) {
-        yield status("stopped", "stopped by the user");
-        return;
-      }
-      yield frame;
-    }
-    return;
-  }
-
   yield status("started", `${short(request.city, 40)} / ${short(request.projectType, 40)}`);
 
   // --- load the city and the pack. Nothing here is city-specific.
   let city: CityConfig;
+  let plans: Plan[];
   try {
-    city = await (deps.loadCity ?? ((name: string) => loadCityFromDisk(appRoot, name)))(
-      request.city,
-    );
+    if (deps.loadCity !== undefined) {
+      plans = deps.loadPlans !== undefined ? await deps.loadPlans(request.city) : [];
+      city = mergePlanTargets(await deps.loadCity(request.city), plans);
+    } else {
+      ({ city, plans } = await loadCityWithPlans(appRoot, request.city));
+    }
   } catch {
     yield error("city_not_found", `No city configuration exists for "${short(request.city, 60)}".`);
     yield status("stopped", "no city configuration");
@@ -466,7 +421,7 @@ async function* runCore(
   if (apiKey === null) {
     yield error(
       "missing_api_key",
-      "ANTHROPIC_API_KEY is not set, so no live run is possible. Use replay mode instead.",
+      "ANTHROPIC_API_KEY is not set, so the agent cannot run.",
     );
     yield status("stopped", "no API key");
     return;
@@ -499,6 +454,8 @@ async function* runCore(
     pack,
     statutes,
     handbookAttached: handbook !== null,
+    // A plan for another project type would walk the wrong form.
+    plans: plans.filter((p) => slugify(p.project_type) === slugify(pack.type)),
   });
   const toolDefs = cacheTools(tools.TOOL_DEFINITIONS);
   const messages: Anthropic.MessageParam[] = [
@@ -510,6 +467,7 @@ async function* runCore(
         handbookBase64: handbook?.base64,
         handbookTitle: handbook?.title,
         now: now(),
+        maxTurns: caps.maxSteps,
       }),
     },
   ];

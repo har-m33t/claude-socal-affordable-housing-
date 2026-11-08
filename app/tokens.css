@@ -30,9 +30,9 @@
   --neutral-subtle: #eff2f5;
 
   /* the two pointers: never distinguished by color alone (shape + label too) */
-  --plan: #bc4c00; /* terracotta, solid hand */
+  --plan: #bc4c00; /* terracotta, solid arrow cursor */
   --plan-subtle: #fff1e5;
-  --answer: #0969da; /* blue, outlined hand with a "?" badge */
+  --answer: #0969da; /* blue, outlined arrow cursor with a "?" badge */
   --answer-subtle: #ddf4ff;
 
   /* shape */

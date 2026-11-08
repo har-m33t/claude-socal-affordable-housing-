@@ -116,7 +116,7 @@ describe("TOOL_DEFINITIONS", () => {
       const expected: Record<string, string[]> = {
         point_to: ["item_id"],
         highlight: ["item_id"],
-        mark_item: ["item_id", "status", "statute_id"],
+        mark_item: ["item_id", "status", "text", "statute_id"],
         draft_field: ["item_id", "text", "statute_id"],
         add_note: ["item_id", "text", "statute_id"],
       };
@@ -495,18 +495,21 @@ describe("validateToolInput - rejections", () => {
     }
   });
 
-  it("rejects text supplied to point_to, highlight and mark_item", () => {
+  it("rejects text supplied to point_to and highlight", () => {
     expect(err(validateToolInput("point_to", { item_id: "item-1", text: "hi" }, city))).toMatch(
       /"text" is only allowed/,
     );
     expect(err(validateToolInput("highlight", { item_id: "item-1", text: "hi" }, city))).toMatch(
       /"text" is only allowed/,
     );
-    expect(
-      err(
-        validateToolInput("mark_item", { item_id: "item-1", status: "complete", text: "hi" }, city),
-      ),
-    ).toMatch(/"text" is only allowed/);
+  });
+
+  it("accepts a short status reason on mark_item, treats null as none, and caps its length", () => {
+    const ok = validateToolInput("mark_item", { item_id: "item-1", status: "missing", text: "No meter spot report in your files" }, city);
+    expect(ok.ok && ok.event.text).toBe("No meter spot report in your files");
+    const none = validateToolInput("mark_item", { item_id: "item-1", status: "complete", text: null, statute_id: null }, city);
+    expect(none.ok && "text" in none.event).toBe(false);
+    expect(err(validateToolInput("mark_item", { item_id: "item-1", status: "complete", text: "x".repeat(201) }, city))).toBeTruthy();
   });
 
   it("rejects a model-supplied citation as an unrecognized key", () => {

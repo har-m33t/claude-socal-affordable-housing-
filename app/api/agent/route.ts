@@ -8,11 +8,10 @@
  * The request body can contain text an applicant typed. It is never logged,
  * never echoed back in full, and never written to disk by this file.
  *
- * `record` is NOT a body field. Recording overwrites fixtures/replay.json -
- * the demo's fallback when the API or the wifi fails - so whether a run is
- * recorded is an operator decision (POINTER_ALLOW_RECORD, see config.ts), not
- * something a caller asks for. The schema below is strict, so a body carrying
- * `record` is rejected as an unknown key rather than quietly ignored.
+ * Every accepted request is a live run of the real agent. There is no
+ * recorded or replayed mode: without ANTHROPIC_API_KEY the route answers 503.
+ * The schema below is strict, so a body carrying any other key (`replay`,
+ * `record`, ...) is rejected as an unknown key rather than quietly ignored.
  *
  * There is no authentication and no Origin/CSRF check here on purpose: this is
  * a localhost prototype, and deploying it further is gated on HTTPS, CORS
@@ -22,7 +21,7 @@ import { z } from "zod";
 
 // Relative, not the "@/" alias: this handler is unit-tested directly and the
 // test runner does not resolve tsconfig paths.
-import { hasApiKey, recordingEnabled } from "../../../lib/agent/config";
+import { hasApiKey } from "../../../lib/agent/config";
 import { runAgent } from "../../../lib/agent/loop";
 import {
   clientKey,
@@ -36,7 +35,7 @@ import type { AgentRunInput } from "../../../lib/agent/loop";
 
 // SSE must never be statically optimized, prerendered or cached.
 export const dynamic = "force-dynamic";
-// The loop reads data/ and fixtures/ from disk.
+// The loop reads data/ from disk.
 export const runtime = "nodejs";
 
 /**
@@ -73,10 +72,9 @@ const BodySchema = z.strictObject({
       { message: `documents exceed the combined ${TOTAL_DOCUMENT_CHARS} character budget for one run` },
     )
     .optional(),
-  replay: z.boolean().optional(),
-  // No `record` field. See the header comment: it is server-side only.
-  // No `packet` field either: superseded by `documents` (issue #3). Both it
-  // and `type` are now rejected as unknown keys rather than ignored.
+  // No `replay` or `record` field: every run is live (see the header). No
+  // `packet` field either: superseded by `documents` (issue #3). All of these,
+  // and `type`, are rejected as unknown keys rather than ignored.
 });
 
 /** zod issues are reduced to path + message so no submitted value is echoed. */
@@ -115,69 +113,59 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const live = parsed.data.replay !== true;
-
-  if (live && !hasApiKey()) {
+  if (!hasApiKey()) {
     return json(
       {
         error: "no_api_key",
-        message:
-          "ANTHROPIC_API_KEY is not set on the server, so a live run is not possible. " +
-          "Send { replay: true } to stream a recorded run instead.",
+        message: "ANTHROPIC_API_KEY is not set on the server, so the agent cannot run.",
       },
       503,
     );
   }
 
-  // Only live runs spend tokens, so only live runs are rate limited. Two caps
-  // are checked: the whole app's ceiling first, then this client's own.
-  if (live) {
-    const who = clientKey(request.headers);
-    const caps = rateLimitOptions();
-    // Durable first: in-process counters are per serverless instance, so on
-    // Vercel the global cap is only real when it lives in Redis.
-    const durable = await checkDurableLimit(who, caps);
-    let decision = durable;
-    if (decision === null) {
-      // Redis did not answer. If it was never configured, the in-process
-      // limiter is simply the limiter. If it WAS configured, treat this as
-      // degraded and apply a deliberately tighter budget: otherwise an
-      // attacker who can break Redis (by exhausting its quota, say) would
-      // silently restore the per-instance ceiling the durable limiter exists
-      // to replace - an escalation, not a fallback.
-      const configured = durableBackend() !== null;
-      decision = configured
-        ? degradedRateLimiter({ ...caps, ...degradedCaps(caps) }).check(who)
-        : requestRateLimiter().check(who);
-    }
-    if (!decision.ok) {
-      const seconds = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
-      const atGlobalCeiling = decision.scope === "global";
-      return new Response(
-        JSON.stringify({
-          error: atGlobalCeiling ? "rate_limited_global" : "rate_limited",
-          message: atGlobalCeiling
-            ? `This app is at its ceiling for live agent runs across all callers. Try again in about ${seconds}s, or send { replay: true } for a recorded run.`
-            : `Too many live agent runs. Try again in about ${seconds}s, or send { replay: true } for a recorded run.`,
-          retry_after_ms: decision.retryAfterMs,
-        }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            "Cache-Control": "no-store",
-            "Retry-After": String(seconds),
-          },
+  // Every run spends tokens, so every run is rate limited. Two caps are
+  // checked: the whole app's ceiling first, then this client's own.
+  const who = clientKey(request.headers);
+  const caps = rateLimitOptions();
+  // Durable first: in-process counters are per serverless instance, so on
+  // Vercel the global cap is only real when it lives in Redis.
+  const durable = await checkDurableLimit(who, caps);
+  let decision = durable;
+  if (decision === null) {
+    // Redis did not answer. If it was never configured, the in-process
+    // limiter is simply the limiter. If it WAS configured, treat this as
+    // degraded and apply a deliberately tighter budget: otherwise an
+    // attacker who can break Redis (by exhausting its quota, say) would
+    // silently restore the per-instance ceiling the durable limiter exists
+    // to replace - an escalation, not a fallback.
+    const configured = durableBackend() !== null;
+    decision = configured
+      ? degradedRateLimiter({ ...caps, ...degradedCaps(caps) }).check(who)
+      : requestRateLimiter().check(who);
+  }
+  if (!decision.ok) {
+    const seconds = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
+    const atGlobalCeiling = decision.scope === "global";
+    return new Response(
+      JSON.stringify({
+        error: atGlobalCeiling ? "rate_limited_global" : "rate_limited",
+        message: atGlobalCeiling
+          ? `This app is at its ceiling for agent runs across all callers. Try again in about ${seconds}s.`
+          : `Too many agent runs. Try again in about ${seconds}s.`,
+        retry_after_ms: decision.retryAfterMs,
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "no-store",
+          "Retry-After": String(seconds),
         },
-      );
-    }
+      },
+    );
   }
 
-  const body: AgentRunInput = {
-    ...parsed.data,
-    // Server-side only. A caller cannot ask for this.
-    record: recordingEnabled(),
-  };
+  const body: AgentRunInput = parsed.data;
 
   // request.signal fires when the browser's stop button aborts the fetch.
   return sseResponse(runAgent(body, { signal: request.signal }));

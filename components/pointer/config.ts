@@ -13,14 +13,11 @@
 import typeAdu from "@/data/types/adu.json";
 import typesFixture from "@/fixtures/mock-types.json";
 import packetManifest from "@/data/packet/manifest.json";
-import planRunFixture from "@/fixtures/plan-run.json";
 import planAnaheimAdu from "@/data/plans/anaheim-adu.json";
 import { checkPlan, type Plan } from "./plan";
 import {
   isSafeUrl,
   normalizeSource,
-  parseEvent,
-  type AgentEvent,
   type ChecklistItem,
   type CityConfig,
   type CoverageRow,
@@ -130,12 +127,6 @@ const RAW_CITIES: RawCity[] = [
   city_westminster,
   city_yorba_linda,
 ];
-
-/**
- * "scripted": real city data, but the run is replayed from fixtures rather than
- * driven by the model. "live" once the editor is wired to /api/agent.
- */
-export const DATA_MODE: "scripted" | "live" = "scripted";
 
 /**
  * Team 1 records checklist_pdf as a repo path (data/docs/...). Next only serves
@@ -445,19 +436,6 @@ export const PACKET_FILES: PacketFile[] = packetManifest.files as PacketFile[];
 export const DEFAULT_CITY: string = VERIFIED_CITIES[0] ?? CITY_NAMES[0] ?? "";
 export const DEFAULT_TYPE = "adu";
 
-/** The scripted plan run (fixtures/plan-run.json), validated. Malformed rows are dropped and counted so the UI can show it. */
-export function loadMockEvents(): { events: AgentEvent[]; dropped: number } {
-  const raw = (planRunFixture as { events: unknown[] }).events;
-  const events: AgentEvent[] = [];
-  let dropped = 0;
-  for (const r of raw) {
-    const e = parseEvent(r);
-    if (e) events.push(e);
-    else dropped++;
-  }
-  return { events, dropped };
-}
-
 /** The multi-step plan for the default city and type. Invalid plans throw at load. */
 export const PLAN: Plan = (() => {
   const plan = planAnaheimAdu as unknown as Plan;
@@ -465,3 +443,12 @@ export const PLAN: Plan = (() => {
   if (problems.length) throw new Error(`data/plans/anaheim-adu.json is invalid: ${problems.join("; ")}`);
   return plan;
 })();
+
+/**
+ * The plan for a city and project type, or undefined when none has been written.
+ * Only Anaheim ADU has one today; a verified city without a plan gets no run.
+ */
+export function planFor(city: string, projectType: string): Plan | undefined {
+  const norm = (v: string) => v.trim().toLowerCase();
+  return norm(PLAN.city) === norm(city) && norm(PLAN.project_type) === norm(projectType) ? PLAN : undefined;
+}

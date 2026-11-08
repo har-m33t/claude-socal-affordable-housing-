@@ -20,10 +20,8 @@ Track every dataset, report, and article used. Add the date you accessed it.
 
 ## ADU permitting — Orange County
 
-Collected for the [Pointer ADU permit copilot build plan](../docs/pointer-adu-copilot-build-plan.md).
-These rows come from the event bundle's Lane 2 data list
-(`claude-impact-lab-uci-main/lanes/2-clear-it/data/DATA-SOURCES.md`), compiled by the organizers on
-2026-11-06. **Not independently re-opened** — the status column is the organizers' check, not ours.
+Collected for Pointer, the ADU permit copilot in this repo. These rows come from a sourced data
+list compiled by third parties on 2026-11-06. **Not independently re-opened** — the status column is that list's check, not ours.
 `VERIFIED-EXA` means a plain fetch was blocked (403) and the content was confirmed by another tool;
 the page opens normally in a browser.
 

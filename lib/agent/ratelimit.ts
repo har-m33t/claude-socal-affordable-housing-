@@ -8,7 +8,7 @@
  *
  * Fixed window, in process, no dependency and no store. That is the right size
  * for a localhost prototype: it resets when the server restarts and it does not
- * coordinate across instances. Replay runs cost nothing and are never limited.
+ * coordinate across instances.
  *
  * TWO caps, both checked, the global one first:
  *   - per client, keyed on a proxy header, which a caller may be able to

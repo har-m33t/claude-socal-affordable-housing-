@@ -3,7 +3,7 @@
 // Every pointable thing on the stage (a PDF overlay box, a file-board card) is an
 // element carrying `data-target-id`. The pointer layer finds that element, measures
 // it relative to the scroll container's *content* (so the result does not change
-// when the user scrolls), and turns the rect into the point the fingertip lands on.
+// when the user scrolls), and turns the rect into the point the cursor tip lands on.
 
 export interface Rect {
   left: number;
@@ -33,11 +33,11 @@ export function contentRect(el: ClientRect, container: ClientRect, scroll: { lef
 }
 
 /**
- * Where the fingertip lands on a target: just inside its left edge, a little below
- * the middle, so the hand (which hangs down and to the right of its tip) covers
- * as little of the target's text as possible.
+ * Where the cursor's arrow tip (its hotspot) lands on a target: just inside its
+ * left edge, a little below the middle, so the cursor and its label (which hang
+ * down and to the right of the tip) cover as little of the target's text as possible.
  */
-export function fingertipPoint(r: Rect): Point {
+export function tipPoint(r: Rect): Point {
   return { x: r.left + Math.min(r.width * 0.06, 28), y: r.top + r.height * 0.55 };
 }
 

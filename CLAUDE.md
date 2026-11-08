@@ -15,9 +15,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Two things share this repo:
 
 1. **A research/docs repo** on SoCal affordable housing (LA, Orange, San Diego, Riverside, San Bernardino, Ventura, Imperial counties). Rough notes → `research/notes/`; polished write-ups → `docs/`; every source → `research/sources.md` with an access date. Raw datasets in `data/raw/` (git-ignored, never edited in place); cleaned output in `data/processed/`. Don't commit files over ~50 MB — link them in `sources.md`. File names are lowercase-hyphenated.
-2. **A hackathon project plan**: `docs/pointer-adu-copilot-build-plan.md` describes "Pointer", an ADU permit copilot for Anaheim (Next.js/TypeScript/Tailwind app, Claude tool loop in a Next.js API route streaming SSE, in-browser PII redaction, city/type config as JSON, shared schemas in `contracts/`, four team-owned folders). **None of that app code exists yet** — the plan is the spec. Its Security layer table and "not yet verified" rule (no advice for any city/type with `verified: false`) are requirements, not suggestions.
+2. **Pointer**, an ADU permit copilot for Anaheim (Next.js 16 / React 19 / TypeScript / Tailwind, Node 24). See `README.md`. Key pieces: `data/plans/anaheim-adu.json` (the 13-step plan; every target is a verbatim quote with page + box), `app/api/agent/` + `lib/agent/` (Claude tool loop with five tools, streamed as SSE; live only, no replay), `components/stage/` (documents + plan/answer cursors), `components/sidebar/` (Plan / Ask tabs), `lib/redact/` (in-browser redaction), `lib/voice/` + `lib/i18n/` (on-device voice and translation), shared schemas in `contracts/`. The "not yet verified" rule is a requirement: no advice for any city/type with `verified: false`.
 
-The hackathon reference bundle is tracked only as `claude-impact-lab-uci-main.zip`; extract with `unzip -q claude-impact-lab-uci-main.zip -d .` — the extracted `claude-impact-lab-uci-main/` folder is git-ignored and must stay untracked.
+Pointer commands: `npm ci`, `npm run dev`, `npm test` (vitest, includes `tests/security/`), `npm run typecheck`. Live checks need `ANTHROPIC_API_KEY` in `.env.local`.
 
 ## Commands
 

@@ -2,9 +2,9 @@
 """Generate one unverified stub city file per Orange County city.
 
 Usage:
-  python data/tools/make_stubs.py claude-impact-lab-uci-main/lanes/2-clear-it/data/oc-cities.json
+  python data/tools/make_stubs.py data/processed/oc-cities.json
 
-Reads the organizers' 34-city list and writes data/cities/<slug>.json for every
+Reads the 34-city list of Orange County's incorporated cities and writes data/cities/<slug>.json for every
 city that does not already have a file, so hand-built files (anaheim.json) are
 never overwritten. Every stub has verified: false and empty checklists: the app
 must show "not yet verified" for these and never give advice from them.

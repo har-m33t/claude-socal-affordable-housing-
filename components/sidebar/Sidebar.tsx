@@ -21,7 +21,11 @@ import {
 } from "./icons";
 import { PlanTab } from "./PlanTab";
 import { planView, stepQuestion, suggestedQuestions } from "./plan-view";
+import { pickVoice } from "@/lib/voice/voices";
 import { useAnswerSession } from "./use-answer-session";
+import { useLanguage } from "./use-language";
+import { useVoiceInput } from "./use-voice-input";
+import { useVoices } from "./use-voices";
 
 type Tab = "plan" | "ask";
 const TABS: Tab[] = ["plan", "ask"];
@@ -46,7 +50,12 @@ export function Sidebar(props: SidebarProps) {
     focusNext.current = focus;
   }, []);
 
+  const lang = useLanguage();
+  const voices = useVoices();
   const session = useAnswerSession({
+    language: lang.language,
+    translation: lang.translation,
+    voices,
     provider: props.provider,
     plan,
     city: props.city,
@@ -56,6 +65,17 @@ export function Sidebar(props: SidebarProps) {
     backToStepSignal: props.backToStepSignal,
     onDismissed: () => switchTo("plan", "plan"),
   });
+
+  const mic = useVoiceInput({
+    language: lang.language,
+    draft,
+    setDraft,
+    onDone: () => inputRef.current?.focus(),
+  });
+  // Voice on, but no voice on this device speaks the reply language: say so rather than misread it.
+  const noVoiceFor =
+    session.state.voice && session.voiceSupported && voices.length > 0 && !pickVoice(voices, lang.language) ? lang.language : undefined;
+  const suggestions = useMemo(() => suggestedQuestions(plan, view.current, planTargetId), [plan, view, planTargetId]);
 
   // A reply the homeowner hasn't looked at yet: the Ask icon sparkles until they open Ask.
   const replies = session.state.turns.filter((t) => t.role === "pointer").length;
@@ -217,6 +237,7 @@ export function Sidebar(props: SidebarProps) {
           onDecide={props.onDecide}
           onSelectTarget={props.onSelectTarget}
           onAskAboutStep={askAboutStep}
+          runNote={props.runNote}
         />
       </div>
       <div
@@ -236,9 +257,17 @@ export function Sidebar(props: SidebarProps) {
           draft={draft}
           onDraft={setDraft}
           onAsk={session.ask}
-          suggestions={suggestedQuestions(plan, view.current, planTargetId)}
+          suggestions={suggestions}
           onBackToStep={props.onBackToStep}
           inputRef={inputRef}
+          language={lang.language}
+          languageOptions={lang.options}
+          languageDownload={lang.download}
+          languageError={lang.error}
+          languagePending={lang.pending}
+          onChooseLanguage={lang.choose}
+          noVoiceFor={noVoiceFor}
+          mic={mic}
         />
       </div>
     </aside>

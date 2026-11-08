@@ -1,6 +1,5 @@
 /**
- * Lane 3 tests: the prose law backstop, the statute resolver, the run recorder
- * and replay mode.
+ * Lane 3 tests: the prose law backstop and the statute resolver.
  *
  * No network. The statute table under test is the real `data/statutes.json`,
  * so no statute number, section, range or checked date is invented here: every
@@ -8,14 +7,10 @@
  * entries rather than typed in. Fake citations and ids are marked fake in
  * place and point at the reserved `.invalid` TLD.
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { existsSync } from "node:fs";
-import { promises as fs } from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { describe, expect, it } from "vitest";
 
 import statutesJson from "../../data/statutes.json";
-import type { AgentEvent, StatuteEntry, StreamFrame } from "../../lib/agent/types";
+import type { AgentEvent, StatuteEntry } from "../../lib/agent/types";
 import {
   PROSE_LAW_REASON,
   loadStatuteTable,
@@ -24,8 +19,6 @@ import {
   verifier,
   verifyEvent,
 } from "../../lib/agent/verifier";
-import { createRecorder } from "../../lib/agent/recorder";
-import { DEFAULT_REPLAY_PATH, loadReplay } from "../../lib/agent/replay";
 
 // Interpreted, not cast: the real file ships the {about, statutes:[...]}
 // wrapper, and a cast would hand every test the wrapper object instead.
@@ -103,6 +96,11 @@ describe("verifyEvent pass-through", () => {
     const result = verifyEvent(note, statutes);
     expect(result).toEqual({ ok: true, event: note });
     if (result.ok) expect(result.event).toBe(note);
+  });
+
+  it("scans a mark_item status reason too: law in prose is dropped", () => {
+    expect(verifyEvent(event({ tool: "mark_item", status: "missing", text: "No meter spot report in your files" }), statutes).ok).toBe(true);
+    expect(verifyEvent(event({ tool: "mark_item", status: "missing", text: "Required by Gov. Code 66314" }), statutes).ok).toBe(false);
   });
 
   it("passes an event with no text through unchanged", () => {
@@ -542,135 +540,5 @@ describe("resolveStatuteId", () => {
 
   it("rejects every id against an empty table", () => {
     expect(resolveStatuteId(confirmedEntry.old, []).ok).toBe(false);
-  });
-});
-
-// ------------------------------------------------------ recorder + replay
-
-describe("recorder and replay", () => {
-  let tempDir: string;
-
-  beforeAll(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "pointer-replay-"));
-  });
-
-  afterAll(async () => {
-    await fs.rm(tempDir, { recursive: true, force: true });
-  });
-
-  function framesForTest(): StreamFrame[] {
-    const ts = new Date().toISOString();
-    return [
-      { type: "status", phase: "started", step: 0, detail: "run begin" },
-      { type: "event", event: { tool: "point_to", item_id: "item-1", ts } },
-      {
-        type: "event",
-        event: {
-          tool: "add_note",
-          item_id: "item-2",
-          text: "Your packet is missing the title sheet.",
-          ts,
-        },
-      },
-      {
-        type: "dropped",
-        reason: PROSE_LAW_REASON,
-        event: { tool: "add_note", item_id: "item-3", text: "State law requires this.", ts },
-      },
-      { type: "refusal", reason: "city config is not verified" },
-      { type: "error", code: "stream_closed", message: "client disconnected" },
-      { type: "status", phase: "done" },
-    ];
-  }
-
-  it("round-trips the exact frames through record, save and loadReplay", async () => {
-    const target = path.join(tempDir, "round-trip", "replay.json");
-    const recorder = createRecorder(target);
-    const frames = framesForTest();
-
-    for (const frame of frames) recorder.record(frame);
-    expect(recorder.size()).toBe(frames.length);
-
-    const written = await recorder.save();
-    expect(written).toBe(path.resolve(target));
-    expect(recorder.wroteFile()).toBe(true);
-    expect(existsSync(written)).toBe(true);
-
-    expect(await loadReplay(written)).toEqual(frames);
-  });
-
-  it("creates the parent directory and leaves no temp file behind", async () => {
-    const target = path.join(tempDir, "nested", "deeper", "replay.json");
-    const recorder = createRecorder(target);
-    recorder.record({ type: "status", phase: "started" });
-    await recorder.save();
-
-    expect(await fs.readdir(path.dirname(target))).toEqual(["replay.json"]);
-  });
-
-  it("writes no file when zero frames were recorded", async () => {
-    const target = path.join(tempDir, "empty", "replay.json");
-    const recorder = createRecorder(target);
-
-    expect(recorder.size()).toBe(0);
-    const written = await recorder.save();
-
-    expect(written).toBe(path.resolve(target));
-    expect(recorder.wroteFile()).toBe(false);
-    expect(existsSync(written)).toBe(false);
-    expect(existsSync(path.dirname(target))).toBe(false);
-  });
-
-  it("defaults to fixtures/replay.json without touching it", () => {
-    expect(DEFAULT_REPLAY_PATH).toBe(path.join("fixtures", "replay.json"));
-    expect(existsSync(path.resolve(DEFAULT_REPLAY_PATH))).toBe(false);
-  });
-
-  it("rejects a missing replay file", async () => {
-    await expect(loadReplay(path.join(tempDir, "nope.json"))).rejects.toThrow(/could not be read/);
-  });
-
-  it("rejects a file that is not JSON", async () => {
-    const target = path.join(tempDir, "not-json.json");
-    await fs.writeFile(target, "{ this is not json", "utf8");
-    await expect(loadReplay(target)).rejects.toThrow(/not valid JSON/);
-  });
-
-  it("rejects a file that is not an array of frames", async () => {
-    const target = path.join(tempDir, "not-array.json");
-    await fs.writeFile(target, JSON.stringify({ type: "status", phase: "started" }), "utf8");
-    await expect(loadReplay(target)).rejects.toThrow(/must be a JSON array/);
-  });
-
-  it("rejects a frame with an unknown type", async () => {
-    const target = path.join(tempDir, "bad-type.json");
-    await fs.writeFile(target, JSON.stringify([{ type: "run_shell", command: "rm -rf /" }]), "utf8");
-    await expect(loadReplay(target)).rejects.toThrow(/not a valid StreamFrame array/);
-  });
-
-  it("rejects an event frame carrying an unknown key", async () => {
-    const target = path.join(tempDir, "extra-key.json");
-    const frame = {
-      type: "event",
-      event: { tool: "add_note", item_id: "item-1", ts: new Date().toISOString(), injected: "payload" },
-    };
-    await fs.writeFile(target, JSON.stringify([frame]), "utf8");
-    await expect(loadReplay(target)).rejects.toThrow(/not a valid StreamFrame array/);
-  });
-
-  it("rejects an event frame with an unknown tool name", async () => {
-    const target = path.join(tempDir, "bad-tool.json");
-    const frame = {
-      type: "event",
-      event: { tool: "exfiltrate", item_id: "item-1", ts: new Date().toISOString() },
-    };
-    await fs.writeFile(target, JSON.stringify([frame]), "utf8");
-    await expect(loadReplay(target)).rejects.toThrow(/not a valid StreamFrame array/);
-  });
-
-  it("accepts an empty frame array", async () => {
-    const target = path.join(tempDir, "empty-array.json");
-    await fs.writeFile(target, "[]", "utf8");
-    await expect(loadReplay(target)).resolves.toEqual([]);
   });
 });

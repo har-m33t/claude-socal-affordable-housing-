@@ -16,14 +16,23 @@ import * as nodePath from "node:path";
 
 import { checkPlan, type Plan } from "@/components/pointer/plan";
 import type { ChecklistItem, CityConfig } from "@/lib/agent/types";
+import { PACKET_DOC_TYPE } from "./constants";
+
+export { PACKET_DOC_TYPE };
 
 /** The plan's pointable PDF targets as checklist items, skipping ids the city already has. */
 export function planChecklistItems(plan: Plan, existingIds: ReadonlySet<string>): ChecklistItem[] {
   const items: ChecklistItem[] = [];
   for (const t of plan.targets) {
-    if (!t.page || !t.box || existingIds.has(t.id)) continue;
+    if (existingIds.has(t.id)) continue;
     const doc = plan.documents.find((d) => d.id === t.doc);
-    if (doc?.kind !== "pdf") continue;
+    // File-board targets (the homeowner's files) have no page or box: the app points at
+    // their cards on the board. They are named so a live run can check steps 1 and 13.
+    if (doc?.kind === "packet") {
+      items.push({ id: t.id, text: t.text, page: null, box: null, doc_type: PACKET_DOC_TYPE, source: "" });
+      continue;
+    }
+    if (!t.page || !t.box || doc?.kind !== "pdf") continue;
     items.push({
       id: t.id,
       text: t.text,

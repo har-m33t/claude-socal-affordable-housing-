@@ -153,6 +153,17 @@ export function slotGroups(plan: Plan): SlotGroup[] {
     .filter((g) => g.options.length > 0);
 }
 
+/**
+ * The declared type an added file is sent with, from the slot the homeowner chose:
+ * a file slot's own declared type ("(declared type: site_plan)" in its text),
+ * otherwise the slot's id. Never guessed from the file itself.
+ */
+export function declaredTypeForSlot(plan: Plan, slotId: string): string {
+  const t = targetById(plan, slotId);
+  const fileSlot = !!t && isFileTarget(t) && documentById(plan, t.doc)?.kind === "packet";
+  return (fileSlot && t.text.match(DECLARED)?.[1]?.trim()) || slotId;
+}
+
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;

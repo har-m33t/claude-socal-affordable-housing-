@@ -4,11 +4,14 @@
  * plan names (`data-target-id` = the slot's target id, so both pointers can land
  * on it), then any other packet files, then files added on this device.
  *
- * "Add a file" is entirely client-side. validateUpload() checks the bytes; a PDF's
- * text is read with pdf.js in the browser and passed through the session's
- * redactor; the homeowner sees exactly what would be hidden (RedactionPreview)
- * and chooses the slot the file is for. Nothing guesses the slot and nothing is
- * sent anywhere: there are no network calls in this component.
+ * "Add a file" happens in the browser. validateUpload() checks the bytes; a PDF's
+ * text is read with pdf.js and passed through the session's redactor; the
+ * homeowner sees exactly what would be hidden (RedactionPreview) and chooses the
+ * slot the file is for. Nothing guesses the slot. The list of added files is
+ * owned by the editor (`addedFiles` / `onAddFile` / `onRemoveFile`), which may
+ * send them with a live run; this component only ever hands it the REDACTED text.
+ * The redactor session and the original text never leave this component, and it
+ * makes no network calls itself.
  *
  * Animations:
  *   .anim-fade-up       (design lane) Cards enter, staggered 40ms apart via --stagger.
@@ -20,10 +23,11 @@
  */
 import { useId, useRef, useState, type CSSProperties } from "react";
 import type { PacketFile } from "@/components/pointer/contract";
+import type { AddedDocument } from "@/components/pointer/documents";
 import { targetById, type Plan, type PlanDocument } from "@/components/pointer/plan";
 import type { ItemState } from "@/components/pointer/run-state";
 import { countByKind, createRedactor, RedactionPreview, validateUpload, type RedactionSpan, type Redactor, type UploadKind } from "@/lib/redact";
-import { boardSummaries, fileCards, formatBytes, slotGroups, type BoardSummary, type FileCard } from "./model";
+import { boardSummaries, declaredTypeForSlot, fileCards, formatBytes, slotGroups, type BoardSummary, type FileCard } from "./model";
 import { extractPdfText } from "./pdfjs";
 
 interface Props {
@@ -35,21 +39,27 @@ interface Props {
   answerTargetId?: string;
   selectedTargetId?: string;
   onSelectTarget: (id: string) => void;
+  /** Files added on this device (redacted), owned by the editor. */
+  addedFiles: AddedDocument[];
+  onAddFile: (doc: AddedDocument) => void;
+  onRemoveFile: (id: string) => void;
 }
 
-interface AddedFile {
-  id: string;
-  name: string;
-  kind: UploadKind;
-  size: number;
-  slotId: string;
-  hidden: number;
-}
-
-export function FileBoard({ plan, doc, packet, items, planTargetId, answerTargetId, selectedTargetId, onSelectTarget }: Props) {
+export function FileBoard({
+  plan,
+  doc,
+  packet,
+  items,
+  planTargetId,
+  answerTargetId,
+  selectedTargetId,
+  onSelectTarget,
+  addedFiles,
+  onAddFile,
+  onRemoveFile,
+}: Props) {
   const cards = fileCards(plan, doc.id, packet, items);
   const summaries = boardSummaries(plan, doc.id, items);
-  const [added, setAdded] = useState<AddedFile[]>([]);
   const [adding, setAdding] = useState(false);
   // One redactor per session: the same name gets the same token in every file.
   const [redactor] = useState(() => createRedactor());
@@ -92,9 +102,9 @@ export function FileBoard({ plan, doc, packet, items, planTargetId, answerTarget
             />
           </li>
         ))}
-        {added.map((f) => (
+        {addedFiles.map((f) => (
           <li key={f.id} className="anim-pop">
-            <AddedFileView file={f} slot={targetById(plan, f.slotId)?.label ?? f.slotId} onRemove={() => setAdded((a) => a.filter((x) => x.id !== f.id))} />
+            <AddedFileView file={f} slot={targetById(plan, f.slotId)?.label ?? f.slotId} onRemove={() => onRemoveFile(f.id)} />
           </li>
         ))}
       </ul>
@@ -105,7 +115,7 @@ export function FileBoard({ plan, doc, packet, items, planTargetId, answerTarget
           redactor={redactor}
           onClose={() => setAdding(false)}
           onAdd={(f) => {
-            setAdded((a) => [...a, f]);
+            onAddFile(f);
             setAdding(false);
           }}
         />
@@ -213,7 +223,7 @@ function SummaryRow({
   );
 }
 
-function AddedFileView({ file, slot, onRemove }: { file: AddedFile; slot: string; onRemove: () => void }) {
+function AddedFileView({ file, slot, onRemove }: { file: AddedDocument; slot: string; onRemove: () => void }) {
   return (
     <div className="stage-file-card" data-added>
       <span className="flex items-start gap-2.5">
@@ -273,7 +283,7 @@ function AddFileDrawer({
   plan: Plan;
   redactor: Redactor;
   onClose: () => void;
-  onAdd: (f: AddedFile) => void;
+  onAdd: (f: AddedDocument) => void;
 }) {
   const titleId = useId();
   const slotId = useId();
@@ -412,7 +422,17 @@ function AddFileDrawer({
               disabled={draft.step !== "review" || !slot}
               onClick={() =>
                 draft.step === "review" &&
-                onAdd({ id: `${Date.now()}-${draft.name}`, name: draft.name, kind: draft.kind, size: draft.size, slotId: slot, hidden })
+                onAdd({
+                  id: `${Date.now()}-${draft.name}`,
+                  name: draft.name,
+                  slotId: slot,
+                  declared_type: declaredTypeForSlot(plan, slot),
+                  kind: draft.kind,
+                  size: draft.size,
+                  // Only the redacted text leaves this drawer; the original stays here and is dropped on close.
+                  text: draft.redacted,
+                  hidden,
+                })
               }
             >
               Add to my files

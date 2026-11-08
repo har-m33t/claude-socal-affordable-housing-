@@ -90,3 +90,30 @@ describe("answer session state machine", () => {
     expect(spokenText({ id: "r", role: "pointer", text: "“Meter” — from Doc:", result: found("m") })).toBe("Meter — from Doc: Quote.");
   });
 });
+
+describe("answer session: translation", () => {
+  const asked = { original: "¿Qué es el medidor?", english: "What is the meter?", from: "es" as const };
+  const translation = { lang: "es" as const, text: "“Informe” — de Doc:", quote: "Cita." };
+
+  it("the user turn keeps what they typed and gains the English; the reply carries its translation", () => {
+    const s = run(
+      { type: "ask", id: "q1", question: asked.original },
+      { type: "resolved", id: "q1", result: found("meter"), asked, translation },
+    );
+    expect(s.turns[0]).toMatchObject({ text: "¿Qué es el medidor?", asked });
+    expect(s.turns[1]).toMatchObject({ text: "“X” — from Doc:", translation });
+    // Spoken in the chosen language: translated text, then translated quote.
+    expect(spokenText(s.turns[1])).toBe("Informe — de Doc: Cita.");
+  });
+
+  it("an English question gets no 'asked' note; a failed translation is recorded and the English is spoken", () => {
+    const s = run(
+      { type: "ask", id: "q1", question: "meter" },
+      { type: "resolved", id: "q1", result: found("meter"), asked: { original: "meter", english: "meter", from: "en" }, translationFailed: "vi" },
+    );
+    expect(s.turns[0].asked).toBeUndefined();
+    expect(s.turns[1].translationFailed).toBe("vi");
+    expect(spokenText(s.turns[1])).toBe("X — from Doc: Quote.");
+  });
+});
+

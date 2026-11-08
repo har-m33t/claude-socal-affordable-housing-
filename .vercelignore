@@ -1,8 +1,6 @@
 # Patterns are gitignore-style: an UNANCHORED pattern like `docs/` matches at
 # every level, which previously also excluded public/data/docs/ and 404'd the
 # checklist PDF. Every rule here is anchored with a leading slash on purpose.
-/claude-impact-lab-uci-main.zip
-/claude-impact-lab-uci-main/
 /research/
 /scripts/
 /docs/

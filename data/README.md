@@ -39,7 +39,7 @@ items carry `applies_to` (`adu_and_jadu` or `jadu`). `statutes.json` wraps its e
 ```bash
 python -I data/tools/extract_checklist.py data/raw/anaheim-adu-checklist.pdf
 python -I data/tools/build_anaheim.py
-python -I data/tools/make_stubs.py claude-impact-lab-uci-main/lanes/2-clear-it/data/oc-cities.json
+python -I data/tools/make_stubs.py data/processed/oc-cities.json
 python -I data/tools/make_packet.py
 python -I data/tools/validate.py
 ```

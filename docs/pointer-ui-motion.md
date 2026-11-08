@@ -1,4 +1,4 @@
-# Pointer UI: look, cursor, font and motion
+# Pointer UI: look, pointers, font and motion
 
 Pointer uses GitHub's Primer design language: white and gray surfaces, crisp gray
 borders, green primary buttons, blue links and focus rings. Two colours are
@@ -9,9 +9,9 @@ was added.
 | File | What it holds |
 |---|---|
 | `app/tokens.css` | Colour, shape and motion tokens. The lead froze the names, so you may change values but never rename one. |
-| `app/globals.css` | The theme, the cursor, and the component classes (`btn`, `pill`, `box`, …). It also maps the old `--color-*` names onto the tokens. |
+| `app/globals.css` | The theme, `cursor: pointer` on clickable things, and the component classes (`btn`, `pill`, `box`, …). It also maps the old `--color-*` names onto the tokens. |
 | `app/motion.css` | The animation library described below. |
-| `public/cursors/*.svg` | The two cursor images. |
+| `components/stage/PointerCursor.tsx` | The two on-screen pointers (plan and answer). |
 
 New code uses token names (`var(--fg)`, `var(--border)`, `var(--accent)`) and
 never raw hex. The old names still resolve: `--color-ink` maps to `--fg`,
@@ -29,24 +29,109 @@ The fonts are exposed as `--font-geist` and `--font-geist-mono`.
 use the sans face. `font-serif` remains as an alias for Geist, so older markup
 still renders.
 
-## Cursor
+## The homeowner's cursor
 
-The cursor is an outlined arrow (white fill, 1.5px dark outline, rounded joins,
-soft shadow), modelled on the pointer in GitHub's homepage product demo.
+The homeowner's own mouse cursor is the **system cursor** and is never replaced:
+no custom cursor images, no `cursor: url(...)`. Tailwind's preflight gives
+buttons `cursor: default`, so `globals.css` puts the normal `cursor: pointer` on
+links, buttons, `[role=button]`, `[role=tab]`, selects, `summary`, `label[for]`
+and checkbox/radio/file inputs, and `not-allowed` on disabled controls. Text
+fields keep the browser's I-beam. `tests/ui/design.test.ts` checks that no
+custom cursor comes back.
 
-| File | Used on | Hotspot |
+## The two pointers
+
+Pointer's two on-screen pointers are drawn as multiplayer collaborator cursors,
+like the ones in GitHub's homepage product demo: a crisp arrow with rounded
+joins, a 1.5px white outer outline so it reads on any page, a soft drop shadow,
+and a rounded name tag attached at the arrow's lower right. They are components
+(`components/stage/PointerCursor.tsx`), positioned by
+`components/stage/PointerLayer.tsx`. They are decorative (`aria-hidden`, never
+take clicks). Screen readers get the existing `aria-live` announcement instead
+("Answer is on …").
+
+| | Plan pointer | Answer pointer |
 |---|---|---|
-| `public/cursors/arrow.svg` | everything (`html`) | `4 3` (the tip) |
-| `public/cursors/arrow-click.svg` (blue outline, pale-blue fill) | `a[href]`, `button`, `[role=button]`, `[role=tab]`, `select`, `summary`, `label[for]`, checkbox/radio/file/range inputs, `.item-box`, and Tailwind's `cursor-pointer` | `4 3` |
+| Meaning | The homeowner's current step | Where the answer to their question is |
+| Arrow | **Solid**, filled `--plan` (terracotta), white outline | **Outlined**: white fill, 2px `--answer` (blue) stroke, white halo |
+| Extra mark | none | A blue **"?" badge** at the arrow's tail |
+| Name tag | Filled `--plan`, white text, white rim: "Step 4 of 13" | Outlined `--answer` on white: "Your question" |
+| Extras | Pulses when the answer is the current step | A "Back to my step" button under the tag |
 
-- Two variables hold the cursor values: `--cursor-default` and `--cursor-click`.
-  Use them in place of `pointer`: `cursor: var(--cursor-click)`.
-- Text inputs, textareas and `contenteditable` elements keep the I-beam cursor.
-  Disabled controls show `not-allowed`.
-- Each `url()` names a system cursor as a fallback.
-  `@media (forced-colors: active)` switches back to the system cursors.
-  Keyboard focus rings are unchanged.
-- The images are SVG, so they stay sharp on 2x screens.
+**Colour is never the only signal.** The two differ in fill (solid against
+outlined), in the "?" badge, and in the tag's words, so they can be told apart
+in greyscale or by anyone who can't tell terracotta from blue.
+
+**Hotspot.** The arrow's tip is the hotspot. The tip sits at (3, 2) in the
+24×30 viewBox, drawn at 1.2× (3.6px, 2.4px on screen). The pointer's anchor is
+placed exactly on the target point, and the SVG is offset so the tip lands on
+it. The target point is `tipPoint()` in `components/stage/geometry.ts`: inset
+from the target's left edge by min(6% of width, 28px), and 55% of the way down.
+The arrow and its tag hang down and to the right of that point, so they cover
+as little of the target's text as possible. Near the page's right edge, the tag
+and button flip to the left of the tip. Verified live at 1440, 1100 and 900px:
+the tip lands within 0.02px of the target point.
+
+**Motion** (keyframes in `components/stage/stage.css`):
+
+| Animation | What it does | Timing | Reduced motion |
+|---|---|---|---|
+| glide | The anchor's `transform` transitions, so a pointer glides from target to target on its document | `--dur-pointer` (700ms), `--ease-out` | Jumps |
+| appear (`.anim-pop`) | A pointer that was hidden (first show, tab switch, new answer) appears in place, scaling in from the tip, without gliding across the page | `--dur-slow`, `--ease-spring` | Appears instantly |
+| tap (`stage-cursor-tap`) | A subtle click on arrival: scale 1 → 0.92 → 1 around the tip, after the glide lands. Replays on every new target | 360ms, `--ease-out`, delayed `--dur-pointer` | None |
+| ripple (`stage-cursor-ripple`) | With the tap, a ring in the pointer's colour grows from the tip (0 → 26px) and fades | 520ms, `--ease-out`, delayed `--dur-pointer` | Hidden |
+| pulse (`.anim-pulse-ring`) | When the answer is the current step, rings pulse from the plan pointer's tip instead of a second pointer appearing | 1.6s, loops | One still ring |
+| fade | A dismissed pointer fades out where it is | `--dur-slow` | `--dur-fast` |
+| scroll | The focused target (answer, else step) is scrolled into view if it isn't comfortably visible | smooth `scrollTo` | Instant |
+
+**Re-measuring.** The layer re-measures (at most once per frame) when the
+document resizes, targets mount, the window resizes, or an animation or
+transition inside the document ends. That last trigger matters: the pane's
+fade-up moves targets with a transform, which no ResizeObserver sees.
+
+**SVG ids.** Each pointer instance gets its own shadow filter id from `useId`.
+Every document pane mounts a pointer layer, and a duplicated id resolves to the
+first copy, which may sit in a hidden pane and blank the pointer.
+
+## Document stage animations
+
+From the header comments in `components/stage/*`. Every one is switched off or
+made instant under `prefers-reduced-motion`.
+
+| Where | Animation | What it does | Timing | Reduced motion |
+|---|---|---|---|---|
+| `DocumentStage` | `.anim-fade-up` | A document pane fades up the first time it opens | `--dur-base` | Instant |
+| `DocTabs` | `.underline-tab` | The active tab's underline grows in | `--dur-base`, `--ease-out` | Jumps |
+| `DocTabs` | `.anim-pop` | The "Step N" marker pops in on the step's tab | `--dur-slow`, spring | Instant |
+| `DocTabs` | edge fade | When tabs overflow, the strip scrolls sideways (hidden scrollbar). A 40px mask fades whichever edge has tabs behind it | `--dur-fast` | Instant |
+| `DocTabs` | reveal scroll | The active tab scrolls into view on change and on resize. Long titles truncate, with the full title as a tooltip | smooth `scrollTo` | Instant |
+| `PdfDocument` | box state | Overlay boxes transition background, border and shadow as the run marks them | `--dur-slow` | Instant |
+| `PdfDocument` | `.stage-box-answer` | A blue ring fades in on the box the answer pointer is on | `--dur-slow` | Instant |
+| `FileBoard` | `.anim-fade-up` + `--stagger` | Cards enter, staggered 40ms apart | `--dur-base` | No stagger |
+| `FileBoard` | `.anim-pop` | A file the homeowner just added | `--dur-slow` | Instant |
+| `FileBoard` | `.anim-slide-in-right` | The add-a-file drawer slides in | `--dur-slow` | Instant |
+| `FileBoard` | card state | Border, background and shadow transition as the run marks a card. The pointed card lifts 1px | `--dur-slow` | No lift, instant |
+| `BackToStep` | `.anim-fade-up` | The banner and the floating button enter | `--dur-base` | Instant |
+| `PointerLayer` / `PointerCursor` | glide, appear, tap, ripple, pulse, fade, scroll | See "The two pointers" above | | |
+
+## Sidebar animations
+
+From the header of `components/sidebar/sidebar.css`.
+
+| Animation | What it does | Timing | Reduced motion |
+|---|---|---|---|
+| `sb-progress-fill` | The step progress bar's width and the ring stroke ease to the new value | `--dur-slow` (360ms), `--ease-out` | Jumps |
+| `sb-live` | The "Running" dot breathes while the run plays | 1.6s, `--ease-in-out`, loops | Static dot |
+| `sb-speak` | Three bars bounce while a reply is spoken aloud | 0.9s, `--ease-in-out`, loops, 0.15s stagger | Static bars |
+| `sb-tip` | A tooltip fades in after a short hover delay | `--dur-fast` (120ms), 300ms delay, `--ease-out` | No fade, still shown |
+| `sb-row-current` | The current target row slides its terracotta marker in | `--dur-base` (200ms), `--ease-out` | No transition |
+
+The sidebar also uses these shared utilities: `.anim-fade-up` (step card,
+messages), `.anim-pop` (status dots, "Run finished"), `.anim-slide-in-right`
+(rail expand), `.anim-shimmer` + `.anim-shimmer-text` (thinking placeholder),
+`.gemini-border` (input while thinking), `.anim-sparkle` (Ask icon when an
+answer is unseen), `.anim-collapse` (done steps), and `.underline-tabs` with its
+indicator (tab slide).
 
 ## Motion library
 
@@ -64,7 +149,7 @@ Entrance classes accept a stagger delay:
 | Class | Purpose and where it's used | Timing | Inspiration | Reduced motion |
 |---|---|---|---|---|
 | `.anim-fade-up` | Fades in while rising 6px. Used for cards, chat messages, log rows (`.log-row` uses it) and the report's progress box. | `--dur-base`, `--ease-out` | GitHub's quiet list entrances | Appears instantly |
-| `.anim-pop` | Scales in from 0.92 with a spring. Used for badges, status pills and the pointer arriving. | `--dur-slow`, `--ease-spring` | Gemini's chip and sparkle arrivals | Appears instantly |
+| `.anim-pop` | Scales in from 0.92 with a spring. Used for badges, status pills and a pointer appearing. | `--dur-slow`, `--ease-spring` | Gemini's chip and sparkle arrivals | Appears instantly |
 | `.anim-slide-in-right` | Slides in from 12px to the right. Used for side panels and drawers. | `--dur-slow`, `--ease-out` | GitHub's side panels | Appears instantly |
 | `.anim-shimmer` | Skeleton block with a blue→violet→rose band sweeping across. Used as a "thinking" placeholder. | 1.8s, `--ease-in-out`, loops | Gemini's loading shimmer | A plain gray block |
 | `.anim-shimmer-text` | The same sweep, clipped to text, for status lines such as "Pointer is reading…". | 2.2s linear, loops | Gemini's "Thinking" text | Static muted text |
@@ -130,3 +215,17 @@ danger button. `.mock-tag` is an outlined Label.
 WCAG AA (4.5:1). To pass, `--fg-subtle` was darkened from `#818b98` to
 `#6e7781`. Focus rings are 2px `--accent`. The two pointers differ in shape and
 label as well as colour.
+
+## Voice and language (Ask tab)
+
+| Animation | Purpose | Duration / easing | Reduced motion |
+|---|---|---|---|
+| `.anim-pulse-ring` on the mic (in `--danger`), red composer border | Shows the mic is listening | utility's | static ring |
+| `.anim-pop` on the language menu (origin top right) | Menu opens from its button | utility's | no pop |
+| `.anim-fade-up` on mic panels and on the translation / original toggle | New state enters without a jump | utility's | instant |
+| `.sb-meter > span` width transition | On-device model download progress | `--dur-slow`, `--ease-out` | jumps |
+| `.sb-mic`, `.sb-lang-btn` background transitions | Hover and active feedback | `--dur-fast` | instant |
+
+Voice input and translation run on-device where the browser supports it (Chrome's on-device speech
+recognition and Translator). Read-aloud uses only on-device voices; with no voice for the chosen
+language, the reply says so instead of speaking in the wrong voice.

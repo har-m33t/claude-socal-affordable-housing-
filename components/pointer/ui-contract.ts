@@ -3,8 +3,9 @@
 
 import type { AgentEvent, PacketFile } from "./contract";
 import type { AnswerPointerView, AnswerProvider } from "./answer";
+import type { AddedDocument } from "./documents";
 import type { Plan } from "./plan";
-import type { PlayState } from "./use-replay";
+import type { PlayState } from "./use-run";
 import type { ItemState, LogEntry } from "./run-state";
 
 /** Left side: the active document (a PDF or the file board) with both pointers. */
@@ -27,6 +28,10 @@ export interface DocumentStageProps {
   tapKey: number;
   selectedTargetId?: string;
   onSelectTarget: (id: string) => void;
+  /** Files added on this device (redacted). The editor owns them so the live run can send them. */
+  addedFiles: AddedDocument[];
+  onAddFile: (doc: AddedDocument) => void;
+  onRemoveFile: (id: string) => void;
 }
 
 /** Right side: the slim side rail with two tabs, Plan and Ask. */
@@ -55,6 +60,8 @@ export interface SidebarProps {
   /** Called when the answer pointer is dismissed ("Back to my step" or speech ended). */
   backToStepSignal: number;
   onBackToStep: () => void;
+  /** Optional one-line note about the live run (e.g. why it could not start). The editor shows it in its run bar. */
+  runNote?: string;
 }
 
 export type { AgentEvent };

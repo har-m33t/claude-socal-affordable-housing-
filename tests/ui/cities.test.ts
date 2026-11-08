@@ -24,7 +24,6 @@ import {
   getCityConfig,
   getCityStatus,
   isCityVerified,
-  loadMockEvents,
 } from "@/components/pointer/config";
 import { CityPicker } from "@/components/coverage/CityPicker";
 import { CoverageTable } from "@/components/coverage/CoverageTable";
@@ -263,9 +262,5 @@ describe("the frozen export surface still stands", () => {
     expect(Array.isArray(PROJECT_TYPES)).toBe(true);
     expect(PROJECT_TYPES.length).toBeGreaterThan(0);
     expect(Array.isArray(PACKET_FILES)).toBe(true);
-    const { events, dropped } = loadMockEvents();
-    expect(Array.isArray(events)).toBe(true);
-    expect(events.length).toBeGreaterThan(0);
-    expect(typeof dropped).toBe("number");
   });
 });
