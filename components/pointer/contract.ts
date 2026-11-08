@@ -1,5 +1,5 @@
 // PROVISIONAL types, written by the UI lane (Team 2) from the shapes in
-// docs/pointer-adu-copilot-build-plan.md, because contracts/*.schema.json had not
+// the planned shapes, because contracts/*.schema.json had not
 // landed on origin/main at 12:00. When contracts/ lands, check these against it and
 // change this file only. Every component imports its types from here.
 

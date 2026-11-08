@@ -1,7 +1,7 @@
 /**
  * Frozen shared contracts, encoded for the security tests.
  *
- * Source: docs/pointer-adu-copilot-build-plan.md, "Shared contracts". `contracts/`
+ * Source: contracts/*.schema.json. `contracts/`
  * does not exist yet; when it does, these shapes must stay in line with it (or be
  * replaced by imports from it). Only the fields the security checks depend on are
  * modelled here.
