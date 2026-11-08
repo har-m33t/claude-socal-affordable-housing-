@@ -5,6 +5,7 @@ import { emptyItem, type ItemState } from "@/components/pointer/run-state";
 import {
   boardSummaries,
   answerAnnouncement,
+  declaredTypeForSlot,
   docProgress,
   fileCards,
   handsFor,
@@ -128,5 +129,10 @@ describe("file board", () => {
     const summaries = boardSummaries(PLAN, packet.id, {});
     expect(summaries.map((s) => s.targetId)).toContain("packet-summary");
     expect(cards.some((c) => c.targetId === "packet-summary")).toBe(false);
+  });
+  it("sends an added file with its slot's declared type, or the slot id when the slot is not a file", () => {
+    expect(declaredTypeForSlot(plan, "file-x")).toBe("site_plan");
+    expect(declaredTypeForSlot(plan, "a1")).toBe("a1");
+    expect(declaredTypeForSlot(plan, "nope")).toBe("nope");
   });
 });

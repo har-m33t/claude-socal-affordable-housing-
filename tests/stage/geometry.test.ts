@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentRect, fingertipPoint, isInView, samePoint, scrollTopFor } from "@/components/stage/geometry";
+import { contentRect, tipPoint, isInView, samePoint, scrollTopFor } from "@/components/stage/geometry";
 
 describe("stage geometry", () => {
   it("measures a target in scroll-content space, independent of scroll", () => {
@@ -11,10 +11,10 @@ describe("stage geometry", () => {
     expect(b).toEqual(a);
   });
 
-  it("puts the fingertip just inside the left edge, a little below the middle", () => {
-    expect(fingertipPoint({ left: 100, top: 200, width: 400, height: 50 })).toEqual({ x: 124, y: 227.5 });
-    // Wide boxes cap the inset at 28px so the hand stays near the item's start.
-    expect(fingertipPoint({ left: 0, top: 0, width: 1000, height: 10 })).toEqual({ x: 28, y: 5.5 });
+  it("puts the cursor tip just inside the left edge, a little below the middle", () => {
+    expect(tipPoint({ left: 100, top: 200, width: 400, height: 50 })).toEqual({ x: 124, y: 227.5 });
+    // Wide boxes cap the inset at 28px so the cursor stays near the item's start.
+    expect(tipPoint({ left: 0, top: 0, width: 1000, height: 10 })).toEqual({ x: 28, y: 5.5 });
   });
 
   it("scrolls a target to a third of the viewport, clamped to the scroll range", () => {

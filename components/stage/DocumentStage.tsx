@@ -10,23 +10,24 @@
  *   ├─ live region             "Answer is on <doc>, page N" for screen readers
  *   └─ DocPane × visited docs  one scroll container per document, kept mounted
  *      ├─ PdfDocument | FileBoard   every target renders [data-target-id]
- *      └─ PointerLayer              resolves ids -> positions; plan + answer hands
- *         └─ BackToStep (floating)  under the answer hand
+ *      └─ PointerLayer              resolves ids -> positions; plan + answer cursors
+ *         └─ BackToStep (floating)  under the answer cursor
  *
  * Panes mount the first time their document is shown and then stay mounted (just
  * hidden), so switching tabs is instant and each document keeps its scroll
- * position. Only the active pane measures or shows hands.
+ * position. Only the active pane measures or shows cursors.
  *
  * Load with next/dynamic and ssr: false: pdf.js needs the browser.
  *
  * Animations (all listed in the sub-components' headers; keyframes in stage.css):
  *   .anim-fade-up  A pane fades up the first time it opens (design lane utility).
- *   Hands, tap, pulse, glide, scroll: PointerLayer and PointerHand.
+ *   Cursors, tap, ripple, pulse, glide, scroll: PointerLayer and PointerCursor.
  *   Tabs and Step marker: DocTabs. Cards and drawer: FileBoard. Boxes: PdfDocument.
  */
 import "./stage.css";
 import { useRef, useState } from "react";
 import type { AnswerPointerView } from "@/components/pointer/answer";
+import type { AddedDocument } from "@/components/pointer/documents";
 import type { PacketFile } from "@/components/pointer/contract";
 import type { Plan, PlanDocument } from "@/components/pointer/plan";
 import type { ItemState } from "@/components/pointer/run-state";
@@ -79,9 +80,28 @@ interface DocPaneProps {
   tapKey: number;
   selectedTargetId?: string;
   onSelectTarget: (id: string) => void;
+  addedFiles: AddedDocument[];
+  onAddFile: (doc: AddedDocument) => void;
+  onRemoveFile: (id: string) => void;
 }
 
-function DocPane({ doc, active, plan, items, packet, planTargetId, planLabel, answer, onBackToStep, tapKey, selectedTargetId, onSelectTarget }: DocPaneProps) {
+function DocPane({
+  doc,
+  active,
+  plan,
+  items,
+  packet,
+  planTargetId,
+  planLabel,
+  answer,
+  onBackToStep,
+  tapKey,
+  selectedTargetId,
+  onSelectTarget,
+  addedFiles,
+  onAddFile,
+  onRemoveFile,
+}: DocPaneProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hands = handsFor(plan, doc.id, planTargetId, answer);
   const shared = { items, planTargetId, answerTargetId: hands.answer, selectedTargetId, onSelectTarget };
@@ -96,7 +116,15 @@ function DocPane({ doc, active, plan, items, packet, planTargetId, planLabel, an
               <PdfDocument doc={doc} targets={plan.targets.filter((t) => t.doc === doc.id)} {...shared} />
             </>
           ) : (
-            <FileBoard plan={plan} doc={doc} packet={packet} {...shared} />
+            <FileBoard
+              plan={plan}
+              doc={doc}
+              packet={packet}
+              addedFiles={addedFiles}
+              onAddFile={onAddFile}
+              onRemoveFile={onRemoveFile}
+              {...shared}
+            />
           )}
         </div>
         <PointerLayer

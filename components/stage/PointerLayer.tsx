@@ -5,43 +5,46 @@
  * Contract with the document: each pointable thing renders an element with
  * `data-target-id`. This layer lives inside the document's scroll container
  * (which must be `position: relative`), so it scrolls with the content for free.
- * To place a hand it:
+ * To place a cursor it:
  *   1. finds the element for the target id (geometry.findTargetElement),
  *   2. measures it relative to the scroll content (contentRect: viewport rect
  *      minus container origin plus scroll offset, so scrolling never moves it),
- *   3. converts the rect to the fingertip point (fingertipPoint) and sets a CSS
- *      transform on the hand's anchor.
+ *   3. converts the rect to the tip point (tipPoint, the arrow's hotspot) and
+ *      sets a CSS transform on the cursor's anchor.
  * It re-measures, at most once per animation frame, whenever layout can change:
  * the container or its content resizes (ResizeObserver; covers PDF pages
  * rendering and window/sidebar width changes), target elements mount or unmount
- * (MutationObserver), or the window resizes. Pointers only ever receive ids.
+ * (MutationObserver), the window resizes, or an animation/transition inside the
+ * document ends (transforms such as the pane's fade-up move targets without
+ * resizing anything, so measuring mid-animation would leave the tip off by the
+ * remaining offset). Pointers only ever receive ids.
  *
  * When the focused target changes (the answer if there is one, else the plan
  * step) and it is not comfortably in view, the container scrolls it into view.
  *
  * Animations (keyframes and transitions in stage.css):
  *   glide       The anchor's `transform` transitions over --dur-pointer with
- *               --ease-out, so a hand glides from target to target on its document.
- *   fade        `opacity` over --dur-slow when a hand is dismissed; it fades where it is.
- *   appear      A hand that was hidden (first show, tab switch, new answer) does not
+ *               --ease-out, so a cursor glides from target to target on its document.
+ *   fade        `opacity` over --dur-slow when a cursor is dismissed; it fades where it is.
+ *   appear      A cursor that was hidden (first show, tab switch, new answer) does not
  *               glide in from its old spot: its anchor remounts at the target and
- *               plays .anim-pop (see PointerHand).
+ *               plays .anim-pop (see PointerCursor).
  *   smooth scroll  `scrollTo({ behavior: "smooth" })` to bring the target into view.
- * Reduced motion: no glide (hands jump), scroll is instant, fades stay short.
+ * Reduced motion: no glide (cursors jump), scroll is instant, fades stay short.
  */
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { BackToStep } from "./BackToStep";
-import { contentRect, findTargetElement, fingertipPoint, isInView, samePoint, scrollTopFor, type Point, type Rect } from "./geometry";
-import { PointerHand, type HandVariant } from "./PointerHand";
+import { contentRect, findTargetElement, tipPoint, isInView, samePoint, scrollTopFor, type Point, type Rect } from "./geometry";
+import { PointerCursor, type CursorVariant } from "./PointerCursor";
 
 export interface PointerLayerProps {
   /** The document's scroll container. Must be position: relative and contain the target elements. */
   containerRef: RefObject<HTMLElement | null>;
-  /** False while this document's pane is hidden: hands hide and nothing is measured. */
+  /** False while this document's pane is hidden: cursors hide and nothing is measured. */
   active: boolean;
   planTargetId?: string;
   planLabel: string;
-  /** Pulse the plan hand: the homeowner's question is answered by the current step. */
+  /** Pulse the plan cursor: the homeowner's question is answered by the current step. */
   pulsePlan: boolean;
   tapKey: number;
   answerTargetId?: string;
@@ -55,7 +58,7 @@ interface Layout {
 }
 
 const EMPTY: Layout = { plan: null, answer: null, width: 0 };
-/** Room the hand plus its label chip need to the right of the fingertip. */
+/** Room the cursor plus its name tag (and the Back button) need to the right of the tip. */
 const CHIP_ROOM = 190;
 
 function sameRect(a: Rect | null, b: Rect | null): boolean {
@@ -130,15 +133,23 @@ export function PointerLayer({
     ro?.observe(c);
     if (c.firstElementChild) ro?.observe(c.firstElementChild);
     const mo = new MutationObserver((records) => {
-      // Our own hands mounting is not a layout change worth measuring for.
+      // Our own cursors mounting is not a layout change worth measuring for.
       if (records.some((r) => !layerRef.current?.contains(r.target))) schedule();
     });
     mo.observe(c, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-target-id"] });
     window.addEventListener("resize", schedule);
+    // Our own cursors' animations (pop, tap, ripple) never move a target.
+    const settled = (e: Event) => {
+      if (!layerRef.current?.contains(e.target as Node)) schedule();
+    };
+    c.addEventListener("animationend", settled);
+    c.addEventListener("transitionend", settled);
     return () => {
       ro?.disconnect();
       mo.disconnect();
       window.removeEventListener("resize", schedule);
+      c.removeEventListener("animationend", settled);
+      c.removeEventListener("transitionend", settled);
       cancelAnimationFrame(frame.current);
       frame.current = 0;
     };
@@ -152,31 +163,31 @@ export function PointerLayer({
   }, [focusId, active, schedule]);
   useLayoutEffect(schedule, [planTargetId, answerTargetId, schedule]);
 
-  const planPoint = active && layout.plan ? fingertipPoint(layout.plan) : null;
-  const answerPoint = active && layout.answer ? fingertipPoint(layout.answer) : null;
+  const planPoint = active && layout.plan ? tipPoint(layout.plan) : null;
+  const answerPoint = active && layout.answer ? tipPoint(layout.answer) : null;
   const flip = (p: Point | null) => !!p && layout.width > 0 && p.x + CHIP_ROOM > layout.width;
 
   return (
     <div ref={layerRef} className="stage-pointer-layer">
-      <HandAnchor point={planPoint} variant="plan">
-        <PointerHand variant="plan" label={planLabel} tapKey={tapKey} pulse={pulsePlan} flip={flip(planPoint)} />
-      </HandAnchor>
-      <HandAnchor point={answerPoint} variant="answer">
-        <PointerHand variant="answer" label="Your question" tapKey={answerTargetId ?? ""} flip={flip(answerPoint)} />
+      <CursorAnchor point={planPoint} variant="plan">
+        <PointerCursor variant="plan" label={planLabel} tapKey={tapKey} pulse={pulsePlan} flip={flip(planPoint)} />
+      </CursorAnchor>
+      <CursorAnchor point={answerPoint} variant="answer">
+        <PointerCursor variant="answer" label="Your question" tapKey={answerTargetId ?? ""} flip={flip(answerPoint)} />
         <div className="stage-back-anchor" data-flip={flip(answerPoint) || undefined}>
           <BackToStep placement="floating" onBack={onBackToStep} />
         </div>
-      </HandAnchor>
+      </CursorAnchor>
     </div>
   );
 }
 
 /**
- * Holds a hand on a point. While visible, moves glide (CSS transition). When the
- * hand goes away it fades out where it was; when it comes back it remounts (new
+ * Holds a cursor on a point. While visible, moves glide (CSS transition). When the
+ * cursor goes away it fades out where it was; when it comes back it remounts (new
  * key) at the new point, so it appears in place instead of gliding across the page.
  */
-function HandAnchor({ point, variant, children }: { point: Point | null; variant: HandVariant; children: ReactNode }) {
+function CursorAnchor({ point, variant, children }: { point: Point | null; variant: CursorVariant; children: ReactNode }) {
   const showing = point !== null;
   const [state, setState] = useState<{ showing: boolean; visit: number; last: Point | null }>({
     showing,
