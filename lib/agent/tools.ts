@@ -146,9 +146,16 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
     input_schema: {
       type: "object",
       additionalProperties: false,
-      required: ["item_id", "status", "statute_id"],
+      required: ["item_id", "status", "text", "statute_id"],
       properties: {
         item_id: ITEM_ID_PROPERTY,
+        text: {
+          type: NULLABLE_STRING,
+          description:
+            "Why, in at most 8 plain words grounded only in the packet (e.g. " +
+            "\"No meter spot report in your files\"). Null if there is nothing to add. " +
+            "No statute or section numbers, no ranges, no URLs.",
+        },
         status: {
           type: "string",
           enum: ["complete", "missing", "unknown"],

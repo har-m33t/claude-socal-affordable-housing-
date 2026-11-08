@@ -5,6 +5,7 @@ import { DEFAULT_CITY, PLAN, getCityConfig, loadMockEvents } from "@/components/
 import { normalizeSource, type Citation } from "@/components/pointer/contract";
 import { documentById, stepIndexOf, type PlanTarget } from "@/components/pointer/plan";
 import { foldEvents, loadDecisions, readiness, withDecisions, type Decisions } from "@/components/pointer/run-state";
+import { latestRun } from "@/components/pointer/last-run";
 import { CitationChip, StatusPill } from "@/components/ui/bits";
 
 export function ReadinessReport() {
@@ -15,7 +16,10 @@ export function ReadinessReport() {
   // The report is the end state of the whole run, folded with the same reducer the editor uses,
   // over every plan target (checklist boxes, form fields, files, fee sheet), not just the checklist.
   const scope = { checklist: PLAN.targets };
-  const run = withDecisions(foldEvents(loadMockEvents().events, scope), decisions);
+  // The editor's latest run (live or recorded, with decisions already applied), else the recorded run.
+  const last = latestRun();
+  const run = last ? last.run : withDecisions(foldEvents(loadMockEvents().events, scope), decisions);
+  const source = last ? (last.mode === "live" ? "from your live run" : "from the recorded run") : "from the recorded run (no run in this tab yet)";
   const r = readiness(run, scope);
   const byId = Object.fromEntries(PLAN.targets.map((t) => [t.id, t])) as Record<string, PlanTarget>;
   const total = PLAN.targets.length;
@@ -78,7 +82,7 @@ export function ReadinessReport() {
           </div>
         </div>
         <p className="mt-1 text-sm text-[var(--fg-muted)]">
-          {city.city} · ADU · {PLAN.steps.length} steps across {PLAN.documents.length} documents · checked {PLAN.checked_date ?? "unknown"} · from the scripted run with a made-up applicant.
+          {city.city} · ADU · {PLAN.steps.length} steps across {PLAN.documents.length} documents · checked {PLAN.checked_date ?? "unknown"} · {source}, with a made-up applicant.
           This report is for you and your designer. Pointer does not submit it.
         </p>
       </div>

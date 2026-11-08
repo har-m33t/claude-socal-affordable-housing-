@@ -76,9 +76,11 @@ const pointerToolSchema = z.strictObject({
   item_id: itemIdSchema,
 });
 
+/** mark_item's short reason ("No meter spot report in your files"). The verifier still scans it for law. */
 const markItemSchema = z.strictObject({
   item_id: itemIdSchema,
   status: statusSchema,
+  text: z.string().max(200).optional(),
   statute_id: statuteIdSchema.optional(),
 });
 
@@ -174,8 +176,8 @@ export function validateToolInput(
     if ("status" in raw && name !== "mark_item") {
       return fail(`${name}: "status" is only allowed on mark_item`);
     }
-    if ("text" in raw && name !== "draft_field" && name !== "add_note") {
-      return fail(`${name}: "text" is only allowed on draft_field and add_note`);
+    if ("text" in raw && name !== "draft_field" && name !== "add_note" && name !== "mark_item") {
+      return fail(`${name}: "text" is only allowed on mark_item, draft_field and add_note`);
     }
     if ("statute_id" in raw && !LAW_TOOLS.has(name)) {
       return fail(
@@ -198,6 +200,7 @@ export function validateToolInput(
     const normalised: Record<string, unknown> = { ...raw };
     if (normalised.item_id === null) delete normalised.item_id;
     if (normalised.statute_id === null) delete normalised.statute_id;
+    if (normalised.text === null) delete normalised.text;
 
     // 6. The per-tool schema: required fields present, types right, text within
     //    4000 chars, status in the enum, statute_id a sane lookup key, no extras.

@@ -178,8 +178,8 @@ the plan, walk the plan below and do nothing else:
 - point_to each target before you mark it, draft it or note it.
 - mark_item each target that is a requirement: "complete" only when the
   attached documents show it, "missing" when they plainly do not, "unknown"
-  when you cannot tell. If a short reason helps, add_note on that same target
-  with at most 8 words, drawn only from the attached documents.
+  when you cannot tell. Put a short reason in mark_item's own \`text\` (at most
+  8 words, drawn only from the attached documents), not in a separate note.
 - draft_field a form field only with a value that appears, character for
   character, in an attached document. Redaction tokens such as [NAME_1] count:
   copy them exactly. If no document has the value, mark the field "unknown"

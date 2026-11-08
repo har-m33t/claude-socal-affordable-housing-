@@ -105,6 +105,11 @@ describe("verifyEvent pass-through", () => {
     if (result.ok) expect(result.event).toBe(note);
   });
 
+  it("scans a mark_item status reason too: law in prose is dropped", () => {
+    expect(verifyEvent(event({ tool: "mark_item", status: "missing", text: "No meter spot report in your files" }), statutes).ok).toBe(true);
+    expect(verifyEvent(event({ tool: "mark_item", status: "missing", text: "Required by Gov. Code 66314" }), statutes).ok).toBe(false);
+  });
+
   it("passes an event with no text through unchanged", () => {
     const pointer = event({ tool: "point_to", item_id: "item-2" });
     expect(verifyEvent(pointer, statutes)).toEqual({ ok: true, event: pointer });
