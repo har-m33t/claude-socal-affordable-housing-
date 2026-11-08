@@ -5,19 +5,19 @@
 // Everything visual lives in DocumentStage (left) and Sidebar (right); their
 // props are frozen in ui-contract.ts.
 //
-// Runs: "Check my packet" is a live run (the packet, redacted in this browser,
-// goes to /api/agent and Claude's tool calls drive the pointer). "Play recorded
-// run" replays fixtures/plan-run.json. Either way the sidebar is told which one
-// it is showing; a live run that cannot happen says so and plays the recording.
+// The run: "Check my packet" is a live run (the packet, redacted in this browser,
+// goes to /api/agent and Claude's tool calls drive the pointer). There is no
+// other kind. Before it, the documents show with no statuses; when it cannot
+// happen (no key, rate limited, offline), the run bar says why and nothing runs.
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CityPicker } from "@/components/coverage/CityPicker";
 import { UnverifiedCityNotice } from "@/components/coverage/UnverifiedCityNotice";
-import { DEFAULT_CITY, DEFAULT_TYPE, PACKET_FILES, getCityConfig, loadMockEvents, planFor } from "@/components/pointer/config";
+import { DEFAULT_CITY, DEFAULT_TYPE, PACKET_FILES, getCityConfig, planFor } from "@/components/pointer/config";
 import { stepIndexOf, stepLabel, targetById } from "@/components/pointer/plan";
 import type { AnswerPointerView } from "@/components/pointer/answer";
 import type { AddedDocument } from "@/components/pointer/documents";
-import { useRun } from "@/components/pointer/use-replay";
+import { IDLE_NOTE, useRun } from "@/components/pointer/use-run";
 import { publishRun } from "@/components/pointer/last-run";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import applicant from "@/data/packet/applicant.json";
@@ -30,8 +30,6 @@ const DocumentStage = dynamic(() => import("@/components/stage/DocumentStage"), 
 });
 
 const NO_ANSWER: AnswerPointerView = { pulsePlan: false };
-const IDLE_NOTE = "Recorded run, not live. Press “Check my packet” to have Claude check your files.";
-const RECORDED_NOTE = "Recorded run, not live: a replay of an earlier check.";
 
 export function Editor() {
   const [cityName, setCityName] = useState(DEFAULT_CITY);
@@ -39,14 +37,13 @@ export function Editor() {
   // No advice without a verified city, and no run without a plan for it.
   const plan = verified ? planFor(cityName, DEFAULT_TYPE) : undefined;
 
-  const { events } = useMemo(loadMockEvents, []);
   // Events may name any plan target (checklist boxes, form fields, file slots).
   const scope = useMemo(() => (plan ? { checklist: plan.targets } : undefined), [plan]);
-  const r = useRun(scope, events);
+  const r = useRun(scope);
   // Hand the run (with the homeowner's accept/reject decisions) to the readiness report, in memory.
   useEffect(() => {
-    if (r.run.log.length > 0) publishRun({ run: r.run, mode: r.mode, city: cityName });
-  }, [r.run, r.mode, cityName]);
+    if (r.run.log.length > 0) publishRun({ run: r.run, city: cityName });
+  }, [r.run, cityName]);
   const provider = useMemo(getAnswerProvider, []);
 
   const [answer, setAnswer] = useState<AnswerPointerView>(NO_ANSWER);
@@ -60,7 +57,7 @@ export function Editor() {
   const [manualDoc, setManualDoc] = useState<string | undefined>();
 
   // A different city is a different run: stop whatever was going.
-  const { reset, startLive, playRecorded } = r;
+  const { reset, startLive } = r;
   useEffect(() => {
     reset();
     setAnswer(NO_ANSWER);
@@ -87,7 +84,7 @@ export function Editor() {
     );
   }, [startLive, cityName, addedFiles]);
 
-  const liveRunning = r.mode === "live" && (r.play === "playing" || r.play === "paused");
+  const liveRunning = r.play === "playing" || r.play === "paused";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -98,22 +95,21 @@ export function Editor() {
       >
         <CityPicker value={cityName} onChange={setCityName} id="editor-city" />
         <div className="ml-auto flex items-center gap-2">
-          {/* What the last button press led to, right where it was pressed. Empty until a run starts. */}
+          {/* What the last button press led to, right where it was pressed. */}
           <p role="status" aria-live="polite" className="max-w-md text-right text-xs text-[var(--fg-muted)]">
             {plan ? (
               <>
-                <span className={`pill ${r.mode === "live" ? "pill-complete" : "pill-unknown"} mr-1.5`}>
-                  {r.mode === "live" ? "Live" : "Recorded"}
-                </span>
-                {r.note ?? (r.mode === "recorded" ? IDLE_NOTE : null)}
+                {r.play === "idle" ? (
+                  r.note && <span className="pill pill-unknown mr-1.5">Not run</span>
+                ) : (
+                  <span className="pill pill-complete mr-1.5">Live</span>
+                )}
+                {r.note ?? IDLE_NOTE}
               </>
             ) : null}
           </p>
           <button type="button" className="btn btn-primary" onClick={checkPacket} disabled={!plan || liveRunning}>
             {liveRunning ? "Checking…" : "Check my packet"}
-          </button>
-          <button type="button" className="btn" onClick={() => playRecorded(RECORDED_NOTE)} disabled={!plan}>
-            Play recorded run
           </button>
         </div>
       </div>
@@ -166,7 +162,6 @@ export function Editor() {
             onAnswerPointer={setAnswer}
             backToStepSignal={backSignal}
             onBackToStep={backToStep}
-            runMode={r.mode}
           />
         </div>
       )}

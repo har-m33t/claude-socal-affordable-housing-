@@ -3,12 +3,12 @@
 // is one `LiveRunEnd`, and each one says honestly what happened:
 //
 //   done      the model finished the walk
-//   stopped   the person pressed Stop, the step cap hit, or the run broke midway
-//             (events so far are kept; nothing recorded is mixed in)
-//   refused   the server or the model declined (e.g. an unverified city). No
-//             fallback: a refusal must never be papered over with a recording.
-//   fallback  no live run happened at all (no key, rate limited, server error,
-//             offline). The caller plays the recorded run under `note`.
+//   stopped      the person pressed Stop, the step cap hit, or the run broke
+//                midway (the steps checked so far are kept)
+//   refused      the server or the model declined (e.g. an unverified city)
+//   unavailable  no live run happened at all (no key, rate limited, server
+//                error, offline). Nothing was checked; `note` says why. There
+//                is no substitute run: the caller shows the note and stops.
 import { parseEvent, type AgentEvent } from "@/components/pointer/contract";
 import { readSseData } from "./sse-client";
 
@@ -45,27 +45,28 @@ export type LiveRunEnd =
   | { kind: "done" }
   | { kind: "stopped"; note: string }
   | { kind: "refused"; note: string }
-  | { kind: "fallback"; note: string };
+  | { kind: "unavailable"; note: string };
 
 /** The full-run question. The prompt's plan-walk rules key off "check ... packet ... plan". */
 export const FULL_RUN_QUESTION = "Check this homeowner's packet against every step of the plan, in order.";
 
-const RECORDED = "playing the recorded run instead";
+const NOTHING_RUN = "Nothing was run.";
+export const NO_KEY_NOTE = `Live checks need ANTHROPIC_API_KEY on the server. ${NOTHING_RUN}`;
 
-/** Error codes that mean "nothing was advised, and nothing should be": no fallback. */
+/** Error codes that mean "nothing was advised, and nothing should be". */
 const REFUSAL_CODES = new Set(["not_verified", "city_not_found", "type_not_found"]);
-/** Error codes that mean "no live run was possible": fall back. */
-const FALLBACK_CODES = new Set(["missing_api_key"]);
+/** Error codes that mean "no live run was possible". */
+const UNAVAILABLE_CODES = new Set(["missing_api_key"]);
 
 function httpNote(status: number, body: { error?: unknown; retry_after_ms?: unknown } | null): string {
-  if (status === 503 && body?.error === "no_api_key") return `No API key on the server, so ${RECORDED}.`;
+  if (status === 503 && body?.error === "no_api_key") return NO_KEY_NOTE;
   if (status === 429) {
     const ms = typeof body?.retry_after_ms === "number" ? body.retry_after_ms : NaN;
-    const wait = Number.isFinite(ms) ? ` Try live again in about ${Math.max(1, Math.ceil(ms / 1000))}s.` : "";
-    return `Rate limited, so ${RECORDED}.${wait}`;
+    const wait = Number.isFinite(ms) ? ` Try again in about ${Math.max(1, Math.ceil(ms / 1000))}s.` : "";
+    return `Rate limited. ${NOTHING_RUN}${wait}`;
   }
-  if (status === 400) return `The server rejected the request (400), so ${RECORDED}.`;
-  return `The server answered ${status}, so ${RECORDED}.`;
+  if (status === 400) return `The server rejected the request (400). ${NOTHING_RUN}`;
+  return `The server answered ${status}. ${NOTHING_RUN}`;
 }
 
 async function readJson(res: Response): Promise<{ error?: unknown; retry_after_ms?: unknown } | null> {
@@ -99,15 +100,15 @@ export async function startLiveRun(
     });
   } catch (err) {
     if (signal?.aborted || isAbort(err)) return stoppedByUser;
-    return { kind: "fallback", note: `Could not reach the server, so ${RECORDED}.` };
+    return { kind: "unavailable", note: `Could not reach the server. ${NOTHING_RUN}` };
   }
-  if (!res.ok || !res.body) return { kind: "fallback", note: httpNote(res.status, await readJson(res)) };
+  if (!res.ok || !res.body) return { kind: "unavailable", note: httpNote(res.status, await readJson(res)) };
 
   let events = 0;
   /** A failure before any event is "no live run happened"; after one, the run just stopped. */
   const broke = (what: string): LiveRunEnd =>
     events === 0
-      ? { kind: "fallback", note: `${what}, so ${RECORDED}.` }
+      ? { kind: "unavailable", note: `${what} before anything was checked.` }
       : { kind: "stopped", note: `${what}. The steps checked so far are kept.` };
 
   try {
@@ -134,7 +135,7 @@ export async function startLiveRun(
           const code = typeof frame.code === "string" ? frame.code : "error";
           const message = typeof frame.message === "string" ? frame.message : "The live run failed.";
           if (REFUSAL_CODES.has(code)) return { kind: "refused", note: message };
-          if (FALLBACK_CODES.has(code)) return { kind: "fallback", note: `No API key on the server, so ${RECORDED}.` };
+          if (UNAVAILABLE_CODES.has(code)) return { kind: "unavailable", note: NO_KEY_NOTE };
           return broke(`The live run failed (${code})`);
         }
         case "status": {

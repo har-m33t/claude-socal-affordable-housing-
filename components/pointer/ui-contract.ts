@@ -3,9 +3,9 @@
 
 import type { AgentEvent, PacketFile } from "./contract";
 import type { AnswerPointerView, AnswerProvider } from "./answer";
-import type { AddedDocument, RunMode } from "./documents";
+import type { AddedDocument } from "./documents";
 import type { Plan } from "./plan";
-import type { PlayState } from "./use-replay";
+import type { PlayState } from "./use-run";
 import type { ItemState, LogEntry } from "./run-state";
 
 /** Left side: the active document (a PDF or the file board) with both pointers. */
@@ -60,8 +60,7 @@ export interface SidebarProps {
   /** Called when the answer pointer is dismissed ("Back to my step" or speech ended). */
   backToStepSignal: number;
   onBackToStep: () => void;
-  /** Where the plan run's events come from, and a one-line honest note (e.g. "No API key: playing the recorded run"). */
-  runMode: RunMode;
+  /** Optional one-line note about the live run (e.g. why it could not start). The editor shows it in its run bar. */
   runNote?: string;
 }
 
