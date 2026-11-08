@@ -1,6 +1,6 @@
 // Guards the design lane's contracts: token contrast (WCAG AA), the motion class
-// names other lanes code against, reduced-motion coverage, and the cursor assets.
-import { existsSync, readFileSync } from "node:fs";
+// names other lanes code against, reduced-motion coverage, and that the homeowner's own cursor is the system one.
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
@@ -73,9 +73,17 @@ describe("motion library", () => {
 });
 
 describe("cursor", () => {
-  it.each(["arrow", "arrow-click"])("public/cursors/%s.svg exists and is wired with the tip hotspot", (n) => {
-    expect(existsSync(new URL(`../../public/cursors/${n}.svg`, import.meta.url))).toBe(true);
-    expect(read("app/globals.css")).toContain(`url("/cursors/${n}.svg") 4 3`);
-    expect(read(`public/cursors/${n}.svg`)).toContain('d="M4 3 ');
+  // The homeowner's mouse cursor is never replaced; Pointer's two pointers are components.
+  it("leaves the system cursor alone: no custom cursor images or url() cursors", () => {
+    expect(existsSync(new URL("../../public/cursors", import.meta.url))).toBe(false);
+    const css = ["app/globals.css", "app/motion.css", "components/stage/stage.css", "components/sidebar/sidebar.css"].map(read).join("\n");
+    expect(css).not.toMatch(/cursor:\s*url\(/);
+    expect(css).not.toMatch(/--cursor-(default|click)/);
+  });
+  it("draws the plan and answer pointers as components, not cursor images", () => {
+    expect(readdirSync(new URL("../../components/stage", import.meta.url))).toContain("PointerCursor.tsx");
+    const src = read("components/stage/PointerCursor.tsx");
+    expect(src).toContain('"plan"');
+    expect(src).toContain('"answer"');
   });
 });

@@ -2,7 +2,7 @@
 /**
  * "Back to my step": dismisses the answer pointer and returns to the plan
  * pointer's document. Two placements, same action:
- *   - "floating": a small pill under the answer hand's label (the one interactive
+ *   - "floating": a small pill under the answer cursor's name tag (the one interactive
  *     thing on the pointer layer, so it re-enables pointer events for itself).
  *   - "banner":   a strip across the top of the stage, shown when the answer is on
  *     another document or page than the homeowner's step.

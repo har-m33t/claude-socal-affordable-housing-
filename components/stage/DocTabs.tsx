@@ -9,12 +9,20 @@
  * A proper WAI-ARIA tablist: roving tabindex, Left/Right/Home/End move focus and
  * select (automatic activation), each tab controls its panel.
  *
+ * Overflow: tabs never shrink or clip. When they don't fit, the strip scrolls
+ * sideways (scrollbar hidden), a soft fade masks whichever edge has more tabs
+ * behind it (data-fade-start / data-fade-end), and the active tab is scrolled
+ * into view whenever it changes or the strip resizes. Long titles truncate with
+ * an ellipsis; the full title is the tab's tooltip.
+ *
  * Animations:
  *   .underline-tab  (design lane) The active underline.
  *   .anim-pop       (design lane) The Step marker pops in when it appears.
- * Reduced motion: handled by the utilities.
+ *   edge fade       The mask's edge fades transition over --dur-fast (stage.css).
+ *   scroll          The active tab glides into view (smooth scrollTo).
+ * Reduced motion: handled by the utilities; the strip scrolls instantly.
  */
-import { useRef, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { Plan } from "@/components/pointer/plan";
 import type { ItemState } from "@/components/pointer/run-state";
 import { docProgress, stepMarker } from "./model";
@@ -38,10 +46,41 @@ export function DocTabs({
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const marker = stepMarker(plan, planTargetId, activeDocId);
   const ids = plan.documents.map((d) => d.id);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState({ start: false, end: false });
+
+  // Which edges have tabs hidden behind them.
+  const measure = useCallback(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const next = { start: el.scrollLeft > 1, end: el.scrollLeft < max - 1 };
+    setFade((f) => (f.start === next.start && f.end === next.end ? f : next));
+  }, []);
+
+  // Keep the active tab fully visible: on change, and when the strip resizes.
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const reveal = (smooth: boolean) => {
+      const tab = refs.current[activeDocId];
+      if (tab) revealTab(el, tab, smooth);
+      measure();
+    };
+    reveal(true);
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => reveal(false)) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [activeDocId, measure]);
 
   function onKeyDown(e: KeyboardEvent<HTMLButtonElement>, i: number) {
     const n = ids.length;
-    const to = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+    const to = {
+      ArrowRight: (i + 1) % n,
+      ArrowLeft: (i - 1 + n) % n,
+      Home: 0,
+      End: n - 1,
+    }[e.key];
     if (to === undefined) return;
     e.preventDefault();
     onSelectDoc(ids[to]);
@@ -49,49 +88,81 @@ export function DocTabs({
   }
 
   return (
-    <div role="tablist" aria-label="Documents" className="stage-tabs">
-      {plan.documents.map((d, i) => {
-        const active = d.id === activeDocId;
-        const { reviewed, total } = docProgress(plan, d.id, items);
-        return (
-          <button
-            key={d.id}
-            ref={(el) => {
-              refs.current[d.id] = el;
-            }}
-            id={tabId(d.id)}
-            role="tab"
-            type="button"
-            aria-selected={active}
-            aria-controls={panelId(d.id)}
-            tabIndex={active ? 0 : -1}
-            data-active={active}
-            className="underline-tab stage-tab"
-            title={d.title}
-            onClick={() => onSelectDoc(d.id)}
-            onKeyDown={(e) => onKeyDown(e, i)}
-          >
-            {d.kind === "packet" ? <FolderIcon /> : <PdfIcon />}
-            <span className="stage-tab-title">{d.title.replace(/\s*\(made up\)\s*$/i, "")}</span>
-            {d.made_up && <span className="stage-made-up">made up</span>}
-            {total > 0 && (
-              <span className="stage-counter" title={`${reviewed} of ${total} checked`}>
-                {reviewed}/{total}
-                <span className="sr-only"> checked</span>
-              </span>
-            )}
-            {marker?.docId === d.id && (
-              <span className="stage-step-marker anim-pop">
-                <span aria-hidden className="stage-step-dot" />
-                {marker.label}
-                <span className="sr-only"> is on this document</span>
-              </span>
-            )}
-          </button>
-        );
-      })}
+    <div className="stage-tabs-bar">
+      <div
+        ref={stripRef}
+        role="tablist"
+        aria-label="Documents"
+        className="stage-tabs"
+        data-fade-start={fade.start || undefined}
+        data-fade-end={fade.end || undefined}
+        onScroll={measure}
+      >
+        {plan.documents.map((d, i) => {
+          const active = d.id === activeDocId;
+          const { reviewed, total } = docProgress(plan, d.id, items);
+          return (
+            <button
+              key={d.id}
+              ref={(el) => {
+                refs.current[d.id] = el;
+              }}
+              id={tabId(d.id)}
+              role="tab"
+              type="button"
+              aria-selected={active}
+              aria-controls={panelId(d.id)}
+              tabIndex={active ? 0 : -1}
+              data-active={active}
+              className="underline-tab stage-tab"
+              title={d.title}
+              onClick={() => onSelectDoc(d.id)}
+              onKeyDown={(e) => onKeyDown(e, i)}
+            >
+              {d.kind === "packet" ? <FolderIcon /> : <PdfIcon />}
+              <span className="stage-tab-title">{d.title.replace(/\s*\(made up\)\s*$/i, "")}</span>
+              {d.made_up && <span className="stage-made-up">made up</span>}
+              {total > 0 && (
+                <span className="stage-counter" title={`${reviewed} of ${total} checked`}>
+                  {reviewed}/{total}
+                  <span className="sr-only"> checked</span>
+                </span>
+              )}
+              {marker?.docId === d.id && (
+                <span className="stage-step-marker anim-pop">
+                  <span aria-hidden className="stage-step-dot" />
+                  {marker.label}
+                  <span className="sr-only"> is on this document</span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
+}
+
+/** Room left between a revealed tab and the strip's edge, so it clears the fade. */
+const EDGE = 32;
+
+/** Scroll the strip (only the strip, never the page) so `tab` is fully visible. */
+function revealTab(strip: HTMLElement, tab: HTMLElement, smooth: boolean) {
+  const left = tab.offsetLeft - strip.offsetLeft;
+  const right = left + tab.offsetWidth;
+  const view = strip.clientWidth;
+  let to = strip.scrollLeft;
+  if (left - EDGE < to) to = left - EDGE;
+  else if (right + EDGE > to + view) to = right + EDGE - view;
+  to = Math.max(0, Math.min(to, strip.scrollWidth - view));
+  if (Math.abs(to - strip.scrollLeft) < 1) return;
+  const reduced = typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (typeof strip.scrollTo === "function")
+    strip.scrollTo({
+      left: to,
+      behavior: smooth && !reduced ? "smooth" : "auto",
+    });
+  else strip.scrollLeft = to;
 }
 
 function PdfIcon() {

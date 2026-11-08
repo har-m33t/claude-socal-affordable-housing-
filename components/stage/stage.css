@@ -27,18 +27,53 @@
 }
 
 /* ---------- tabs ---------- */
-.stage-tabs {
-  display: flex;
+/* The strip scrolls sideways when the tabs don't fit; tabs never shrink or clip.
+   --fade-start / --fade-end size the edge masks (set when tabs hide behind that edge). */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+/* The bar carries the background and the bottom rule so the edge masks fade only the tabs. */
+.stage-tabs-bar {
   flex-shrink: 0;
-  gap: 4px;
-  padding: 0 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  min-width: 0;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
+.stage-tabs {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+  transition:
+    --fade-start var(--dur-fast) ease,
+    --fade-end var(--dur-fast) ease;
+}
+.stage-tabs::-webkit-scrollbar {
+  display: none;
+}
+.stage-tabs[data-fade-start] {
+  --fade-start: 40px;
+}
+.stage-tabs[data-fade-end] {
+  --fade-end: 40px;
+}
 .stage-tab {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 8px;
   height: 48px;
@@ -57,7 +92,8 @@
   border-radius: var(--radius-sm);
 }
 .stage-tab-title {
-  max-width: 300px;
+  min-width: 0;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -178,7 +214,7 @@
     visibility 0s linear 0s;
 }
 .stage-anchor[data-variant="answer"] {
-  z-index: 1; /* above the plan hand where they overlap */
+  z-index: 1; /* above the plan cursor where they overlap */
 }
 .stage-anchor:not([data-shown]) {
   opacity: 0;
@@ -187,74 +223,117 @@
     opacity var(--dur-slow) ease,
     visibility 0s linear var(--dur-slow);
 }
-/* The hand body, offset so the fingertip (TIP_X 15, TIP_Y 2) is on the anchor. */
-.stage-hand {
+/* The cursor is a zero-size box at the anchor (= the target point); everything in it
+   is placed relative to the arrow tip. */
+.stage-cursor {
   position: absolute;
-  left: -15px;
-  top: -2px;
-  width: 52px;
-  height: 60px;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0; /* .anim-pop scales in around the tip */
 }
-.stage-hand-tap {
-  transform-origin: 15px 2px;
-  animation: stage-hand-tap 420ms var(--ease-out) var(--dur-pointer) both;
+.stage-cursor[data-variant="plan"] {
+  color: var(--plan);
 }
-@keyframes stage-hand-tap {
+.stage-cursor[data-variant="answer"] {
+  color: var(--answer);
+}
+.stage-cursor-tap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0; /* the tip */
+  animation: stage-cursor-tap 360ms var(--ease-out) var(--dur-pointer) both;
+}
+@keyframes stage-cursor-tap {
   0% {
     transform: scale(1);
   }
-  40% {
-    transform: translateY(2px) scale(0.86);
+  35% {
+    transform: scale(0.92);
   }
   100% {
     transform: scale(1);
   }
 }
-.stage-tip-ring {
+/* The SVG, offset so the arrow tip (TIP_X 3, TIP_Y 2 at SCALE 1.2) is on the anchor. */
+.stage-cursor-arrow {
   position: absolute;
-  left: 1px;
-  top: -12px;
+  left: -3.6px;
+  top: -2.4px;
+  display: block;
+  overflow: visible;
+}
+.stage-cursor-ripple {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  opacity: 0;
+  animation: stage-cursor-ripple 520ms var(--ease-out) var(--dur-pointer) both;
+}
+@keyframes stage-cursor-ripple {
+  0% {
+    opacity: 0.55;
+    transform: scale(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+/* Same-spot pulse: rings centred on the tip, in the plan colour. */
+.stage-cursor .stage-tip-ring {
+  position: absolute;
+  left: -14px;
+  top: -14px;
   width: 28px;
   height: 28px;
-  border: 2px solid var(--plan);
+  border: 2px solid currentColor;
   border-radius: 999px;
 }
-.stage-hand-chip {
+/* The name tag, attached at the arrow's lower right like a collaborator cursor. */
+.stage-cursor-label {
   position: absolute;
-  left: 44px;
-  top: 24px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  left: 15px;
+  top: 22px;
   padding: 0 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  line-height: 22px;
+  line-height: 20px;
   white-space: nowrap;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 1px 3px rgba(31, 35, 40, 0.18), 0 4px 10px rgba(31, 35, 40, 0.1);
 }
-.stage-hand[data-variant="plan"] .stage-hand-chip {
+.stage-cursor[data-variant="plan"] .stage-cursor-label {
+  border: 1.5px solid #fff;
   background: var(--plan);
   color: var(--fg-on-emphasis);
 }
-.stage-hand[data-variant="answer"] .stage-hand-chip {
+.stage-cursor[data-variant="answer"] .stage-cursor-label {
+  left: 29px; /* clear of the "?" badge at the tail */
+  top: 19px;
   border: 1.5px solid var(--answer);
   background: var(--bg);
   color: var(--answer);
 }
-.stage-hand[data-flip] .stage-hand-chip {
+.stage-cursor[data-flip] .stage-cursor-label {
   left: auto;
-  right: 46px;
+  right: 6px;
 }
 .stage-back-anchor {
   position: absolute;
   left: 29px;
-  top: 52px;
+  top: 50px;
 }
 .stage-back-anchor[data-flip] {
   left: auto;
-  right: 4px;
+  right: 6px;
 }
 
 /* ---------- PDF pages and target boxes ---------- */
@@ -496,8 +575,11 @@ button.stage-file-card:hover {
   background: rgba(31, 35, 40, 0.4);
 }
 
-/* ---------- reduced motion: hands jump, nothing bounces or slides ---------- */
+/* ---------- reduced motion: cursors jump, nothing bounces or slides ---------- */
 @media (prefers-reduced-motion: reduce) {
+  .stage-tabs {
+    transition: none;
+  }
   .stage-anchor {
     transition:
       opacity var(--dur-fast) ease,
@@ -508,8 +590,11 @@ button.stage-file-card:hover {
       opacity var(--dur-fast) ease,
       visibility 0s linear var(--dur-fast);
   }
-  .stage-hand-tap {
+  .stage-cursor-tap {
     animation: none;
+  }
+  .stage-cursor-ripple {
+    display: none;
   }
   .stage-box,
   .stage-file-card {
