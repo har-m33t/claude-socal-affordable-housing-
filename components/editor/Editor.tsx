@@ -100,12 +100,12 @@ export function Editor() {
         <div className="ml-auto flex items-center gap-2">
           {/* What the last button press led to, right where it was pressed. Empty until a run starts. */}
           <p role="status" aria-live="polite" className="max-w-md text-right text-xs text-[var(--fg-muted)]">
-            {plan && r.note ? (
+            {plan ? (
               <>
                 <span className={`pill ${r.mode === "live" ? "pill-complete" : "pill-unknown"} mr-1.5`}>
                   {r.mode === "live" ? "Live" : "Recorded"}
                 </span>
-                {r.note}
+                {r.note ?? (r.mode === "recorded" ? IDLE_NOTE : null)}
               </>
             ) : null}
           </p>
@@ -167,7 +167,6 @@ export function Editor() {
             backToStepSignal={backSignal}
             onBackToStep={backToStep}
             runMode={r.mode}
-            runNote={r.note ?? (r.mode === "recorded" ? IDLE_NOTE : undefined)}
           />
         </div>
       )}

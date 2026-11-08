@@ -215,3 +215,17 @@ danger button. `.mock-tag` is an outlined Label.
 WCAG AA (4.5:1). To pass, `--fg-subtle` was darkened from `#818b98` to
 `#6e7781`. Focus rings are 2px `--accent`. The two pointers differ in shape and
 label as well as colour.
+
+## Voice and language (Ask tab)
+
+| Animation | Purpose | Duration / easing | Reduced motion |
+|---|---|---|---|
+| `.anim-pulse-ring` on the mic (in `--danger`), red composer border | Shows the mic is listening | utility's | static ring |
+| `.anim-pop` on the language menu (origin top right) | Menu opens from its button | utility's | no pop |
+| `.anim-fade-up` on mic panels and on the translation / original toggle | New state enters without a jump | utility's | instant |
+| `.sb-meter > span` width transition | On-device model download progress | `--dur-slow`, `--ease-out` | jumps |
+| `.sb-mic`, `.sb-lang-btn` background transitions | Hover and active feedback | `--dur-fast` | instant |
+
+Voice input and translation run on-device where the browser supports it (Chrome's on-device speech
+recognition and Translator). Read-aloud uses only on-device voices; with no voice for the chosen
+language, the reply says so instead of speaking in the wrong voice.
