@@ -3,6 +3,7 @@
 
 import type { AgentEvent, PacketFile } from "./contract";
 import type { AnswerPointerView, AnswerProvider } from "./answer";
+import type { AddedDocument, RunMode } from "./documents";
 import type { Plan } from "./plan";
 import type { PlayState } from "./use-replay";
 import type { ItemState, LogEntry } from "./run-state";
@@ -27,6 +28,10 @@ export interface DocumentStageProps {
   tapKey: number;
   selectedTargetId?: string;
   onSelectTarget: (id: string) => void;
+  /** Files added on this device (redacted). The editor owns them so the live run can send them. */
+  addedFiles: AddedDocument[];
+  onAddFile: (doc: AddedDocument) => void;
+  onRemoveFile: (id: string) => void;
 }
 
 /** Right side: the slim side rail with two tabs, Plan and Ask. */
@@ -55,6 +60,9 @@ export interface SidebarProps {
   /** Called when the answer pointer is dismissed ("Back to my step" or speech ended). */
   backToStepSignal: number;
   onBackToStep: () => void;
+  /** Where the plan run's events come from, and a one-line honest note (e.g. "No API key: playing the recorded run"). */
+  runMode: RunMode;
+  runNote?: string;
 }
 
 export type { AgentEvent };

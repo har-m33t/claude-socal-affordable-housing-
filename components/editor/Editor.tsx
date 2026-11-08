@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DEFAULT_CITY, DEFAULT_TYPE, PACKET_FILES, PLAN, getCityConfig, loadMockEvents } from "@/components/pointer/config";
 import { stepIndexOf, stepLabel, targetById } from "@/components/pointer/plan";
 import type { AnswerPointerView } from "@/components/pointer/answer";
+import type { AddedDocument } from "@/components/pointer/documents";
 import { useReplay } from "@/components/pointer/use-replay";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { getAnswerProvider } from "@/lib/answer";
@@ -30,6 +31,10 @@ export function Editor() {
   const [answer, setAnswer] = useState<AnswerPointerView>(NO_ANSWER);
   const [backSignal, setBackSignal] = useState(0);
   const [selected, setSelected] = useState<string | undefined>();
+  // Files added on this device, redacted. Owned here so a live run can send them.
+  const [addedFiles, setAddedFiles] = useState<AddedDocument[]>([]);
+  const addFile = useCallback((d: AddedDocument) => setAddedFiles((fs) => [...fs, d]), []);
+  const removeFile = useCallback((id: string) => setAddedFiles((fs) => fs.filter((f) => f.id !== id)), []);
   // A tab the homeowner clicked wins until the plan or the answer moves on.
   const [manualDoc, setManualDoc] = useState<string | undefined>();
 
@@ -68,6 +73,9 @@ export function Editor() {
           tapKey={r.cursor}
           selectedTargetId={selected}
           onSelectTarget={setSelected}
+          addedFiles={addedFiles}
+          onAddFile={addFile}
+          onRemoveFile={removeFile}
         />
       </section>
       <Sidebar
@@ -86,6 +94,7 @@ export function Editor() {
         onAnswerPointer={setAnswer}
         backToStepSignal={backSignal}
         onBackToStep={backToStep}
+        runMode="recorded"
       />
     </div>
   );
