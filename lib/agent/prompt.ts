@@ -17,6 +17,7 @@
  * The volatile parts - the question, the packet manifest, the timestamp - go
  * in the user turn AFTER the last breakpoint, so they never evict the prefix.
  */
+import { PACKET_DOC_TYPE } from "../plan/constants";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Plan } from "../../components/pointer/plan";
 import type { CityConfig, ProjectTypePack, StatuteEntry } from "./types";
@@ -237,7 +238,11 @@ export function buildCityBrief(opts: SystemPromptOptions): string {
         item.id,
         item.text,
         item.page === null ? "page unknown" : `page ${item.page}`,
-        item.box === null ? "NOT POINTABLE (no box measured)" : "pointable",
+        item.doc_type === PACKET_DOC_TYPE
+          ? "pointable (a card on the homeowner's file board)"
+          : item.box === null
+            ? "NOT POINTABLE (no box measured)"
+            : "pointable",
         item.doc_type,
         item.source,
       ].join(" | "),

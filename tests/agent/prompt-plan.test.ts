@@ -32,12 +32,14 @@ describe("prompt: the plan walk", () => {
     expect(brief).toContain(PLAN_WALK_RULES);
   });
 
-  it("never lists an id the item_id allowlist would reject (the packet board's slots)", async () => {
+  it("lists the file-board steps too, and marks their targets as cards on the board", async () => {
     const { city, plans } = await loadCityWithPlans(APP_ROOT, "Anaheim");
     const brief = buildCityBrief({ city, pack, statutes: [], handbookAttached: false, plans });
     const planSection = brief.slice(brief.indexOf("PLAN: "));
-    expect(planSection).not.toMatch(/file-sewer-capacity-email|packet-summary/);
-    expect(planSection).toMatch(/1 \| Organize your files \| organize \| packet .*none for you/);
+    expect(planSection).toMatch(/file-sewer-capacity-email/);
+    expect(planSection).toMatch(/packet-summary/);
+    expect(planSection).not.toMatch(/none for you/);
+    expect(brief).toMatch(/file-floor-plan \|.*pointable \(a card on the homeowner's file board\)/);
   });
 
   it("says plainly when there is no plan", () => {
