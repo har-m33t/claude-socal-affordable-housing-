@@ -51,4 +51,54 @@ describe("plan view", () => {
       }
     }
   });
+
+  describe("suggested questions", () => {
+    const step = (id: string) => plan.steps.find((s) => s.id === id)!;
+    const ask = (q: string, current?: string) =>
+      answerLocally(q, { plan, city: plan.city, projectType: plan.project_type, currentTargetId: current });
+
+    it("at most three, each answered locally by a target of its own step", () => {
+      for (const s of plan.steps) {
+        const qs = suggestedQuestions(plan, s, s.targets[0]);
+        expect(qs.length).toBeGreaterThan(0);
+        expect(qs.length).toBeLessThanOrEqual(3);
+        for (const q of qs) {
+          const r = ask(q, s.targets[0]);
+          expect(r.kind, q).toBe("found");
+          if (r.kind === "found") expect(s.targets, q).toContain(r.targetId);
+        }
+      }
+    });
+
+    it("form: what goes in a field, or whether an '(if applicable)' field is needed", () => {
+      expect(suggestedQuestions(plan, step("form-applicant"))).toContain("What goes in “Applicant name”?");
+      expect(suggestedQuestions(plan, step("form-owner"), "express-owner-company")[0]).toBe("Do I have to fill in the owner company?");
+      expect(suggestedQuestions(plan, step("form-signatures")).some((q) => q.startsWith("What am I certifying"))).toBe(true);
+    });
+
+    it("gather: how to get each item", () => {
+      expect(suggestedQuestions(plan, step("gather-before-plan-check"))).toEqual([
+        "How do I get a sewer verification?",
+        "How do I get a meter spot report?",
+        "How do I get a new address request?",
+      ]);
+    });
+
+    it("law: the cited code section, and the fee threshold the document states", () => {
+      expect(suggestedQuestions(plan, step("check-the-law"))).toEqual(["What does AMC Section 18.38.015.110 say?"]);
+      expect(suggestedQuestions(plan, step("impact-fees"))).toEqual([
+        "Do I pay impact fees on an ADU under 750 sq ft?",
+        "What does Government Code Section 66324 say?",
+      ]);
+    });
+
+    it("the plan pointer's target comes first", () => {
+      const s = step("gather-before-plan-check");
+      expect(suggestedQuestions(plan, s, "new-address-request")[0]).toBe("How do I get a new address request?");
+    });
+
+    it("no bland 'What is the applicant company?' chips", () => {
+      for (const s of plan.steps) expect(suggestedQuestions(plan, s).join(" ")).not.toMatch(/What is the applicant/);
+    });
+  });
 });

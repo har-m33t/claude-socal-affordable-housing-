@@ -40,15 +40,22 @@ interface Props {
   onDecide: SidebarProps["onDecide"];
   onSelectTarget: (id: string) => void;
   onAskAboutStep: () => void;
+  runMode: SidebarProps["runMode"];
+  runNote?: string;
 }
 
-export function PlanTab({ plan, view, log, play, controls, onDecide, onSelectTarget, onAskAboutStep }: Props) {
+export function PlanTab({ plan, view, log, play, controls, onDecide, onSelectTarget, onAskAboutStep, runMode, runNote }: Props) {
   const [showDone, setShowDone] = useState(false);
   const step = view.current;
 
   return (
     <div className="sb-plan">
-      <Controls play={play} started={view.started} controls={controls} />
+      <Controls play={play} started={view.started} controls={controls} runMode={runMode} />
+      {runNote && (
+        <p className="sb-run-note" title={runNote}>
+          {runNote}
+        </p>
+      )}
 
       {view.done.length > 0 && (
         <div className="sb-done">
@@ -207,7 +214,17 @@ function TargetRowView({ row, onSelect }: { row: TargetRow; onSelect: (id: strin
   );
 }
 
-function Controls({ play, started, controls }: { play: PlayState; started: boolean; controls: Props["controls"] }) {
+function Controls({
+  play,
+  started,
+  controls,
+  runMode,
+}: {
+  play: PlayState;
+  started: boolean;
+  controls: Props["controls"];
+  runMode: Props["runMode"];
+}) {
   const playing = play === "playing";
   // "Step once" before playing leaves the replay idle; mid-run that reads as paused.
   const shown: PlayState = play === "idle" && started ? "paused" : play;
@@ -234,6 +251,12 @@ function Controls({ play, started, controls }: { play: PlayState; started: boole
       <span className={`sb-play-state sb-play-${shown}`} aria-live="polite">
         {playing && <span className="sb-live-dot" aria-hidden />}
         {{ idle: "Ready", playing: "Running", paused: "Paused", stopped: "Stopped", done: "Done" }[shown]}
+      </span>
+      <span
+        className={`sb-run-mode sb-run-mode-${runMode}`}
+        title={runMode === "live" ? "Claude reads the documents now, live" : "Replaying a run recorded earlier"}
+      >
+        {runMode === "live" ? "Live · Claude" : "Recorded run"}
       </span>
     </div>
   );

@@ -114,6 +114,24 @@ export const SpeakerIcon = ({ muted, ...p }: P & { muted?: boolean }) => (
     {muted ? <path d="M11 6l3 4M14 6l-3 4" /> : <path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.75 3.75a6 6 0 0 1 0 8.5" />}
   </Svg>
 );
+export const MicIcon = (p: P) => (
+  <Svg {...p}>
+    <rect x="5.75" y="1.75" width="4.5" height="7.5" rx="2.25" />
+    <path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2.25" />
+  </Svg>
+);
+/** Language menu: a globe. */
+export const GlobeIcon = (p: P) => (
+  <Svg {...p}>
+    <circle cx="8" cy="8" r="6" />
+    <path d="M2 8h12M8 2c1.6 1.7 2.4 3.7 2.4 6S9.6 12.3 8 14C6.4 12.3 5.6 10.3 5.6 8S6.4 3.7 8 2z" />
+  </Svg>
+);
+export const DownloadIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M8 2.5v7.5M5 7l3 3 3-3M3 12.5h10" />
+  </Svg>
+);
 export const ExternalIcon = (p: P) => (
   <Svg {...p}>
     <path d="M9.5 2.5h4v4M13.5 2.5L8 8M11.5 9.5v3c0 .55-.45 1-1 1h-7c-.55 0-1-.45-1-1v-7c0-.55.45-1 1-1h3" />
