@@ -11,10 +11,23 @@
 // - A result whose id isn't the pending ask is stale (a newer ask replaced it) and is dropped.
 // - not_found answers never carry a pointer.
 // - With voice off, nothing ends "answering" but "Back to my step" (back) or a new ask.
+// - A question asked in another language carries its English form (what retrieval saw);
+//   a reply carries its on-device translation, or notes that translation failed.
 import type { AnswerPhase, AnswerPointerView, AnswerResult, ChatTurn } from "@/components/pointer/answer";
+import type { AskedQuestion, ReplyTranslation } from "@/lib/i18n/flow";
+import type { LangCode } from "@/lib/i18n/languages";
+
+export interface SessionTurn extends ChatTurn {
+  /** User turns asked in another language: the English that retrieval saw. */
+  asked?: AskedQuestion;
+  /** Pointer turns: the reply in the homeowner's language. The English stays in text/result. */
+  translation?: ReplyTranslation;
+  /** Pointer turns: translation to this language was wanted but failed, so the English shows. */
+  translationFailed?: LangCode;
+}
 
 export interface AnswerSessionState {
-  turns: ChatTurn[];
+  turns: SessionTurn[];
   phase: AnswerPhase;
   /** Id of the ask awaiting its result, while thinking. */
   pendingId?: string;
@@ -27,7 +40,14 @@ export interface AnswerSessionState {
 
 export type AnswerSessionAction =
   | { type: "ask"; id: string; question: string }
-  | { type: "resolved"; id: string; result: AnswerResult }
+  | {
+      type: "resolved";
+      id: string;
+      result: AnswerResult;
+      asked?: AskedQuestion;
+      translation?: ReplyTranslation;
+      translationFailed?: LangCode;
+    }
   | { type: "failed"; id: string; text: string }
   | { type: "speechEnded"; id: string }
   | { type: "back" }
@@ -55,9 +75,13 @@ export function answerSessionReducer(s: AnswerSessionState, a: AnswerSessionActi
     case "resolved": {
       if (s.phase !== "thinking" || a.id !== s.pendingId) return s;
       const id = replyId(a.id);
+      const turns = a.asked && a.asked.from !== "en" ? s.turns.map((t) => (t.id === a.id ? { ...t, asked: a.asked } : t)) : s.turns;
+      const reply: SessionTurn = { id, role: "pointer", text: a.result.text, result: a.result };
+      if (a.translation) reply.translation = a.translation;
+      if (a.translationFailed) reply.translationFailed = a.translationFailed;
       return {
         ...s,
-        turns: [...s.turns, { id, role: "pointer", text: a.result.text, result: a.result }],
+        turns: [...turns, reply],
         phase: "answering",
         pendingId: undefined,
         pointerTargetId: a.result.kind === "found" ? a.result.targetId : undefined,
@@ -93,8 +117,10 @@ export function answerPointerView(s: AnswerSessionState, planTargetId: string | 
   return { targetId: s.pointerTargetId, pulsePlan: s.pointerTargetId === planTargetId };
 }
 
-/** The words spoken aloud for a reply: its text, then the quote. */
-export function spokenText(turn: ChatTurn): string {
-  const quote = turn.result?.kind === "found" ? turn.result.quote : undefined;
-  return [turn.text.replace(/[“”]/g, ""), quote].filter(Boolean).join(" ");
+/** The words spoken aloud for a reply: its text, then the quote; in translation when there is one. */
+export function spokenText(turn: SessionTurn): string {
+  const tr = turn.translation;
+  const text = tr ? tr.text : turn.text;
+  const quote = tr ? tr.quote : turn.result?.kind === "found" ? turn.result.quote : undefined;
+  return [text.replace(/[“”「」]/g, ""), quote].filter(Boolean).join(" ");
 }

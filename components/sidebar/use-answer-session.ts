@@ -1,10 +1,15 @@
 "use client";
-// Side effects for the answer session: ask the provider (aborting any ask still in
-// flight), speak replies when voice is on, report the answer pointer up to the
+// Side effects for the answer session: translate the question to English, ask the
+// provider (aborting any ask still in flight), translate the reply back, speak it
+// in the homeowner's language when voice is on, report the answer pointer up to the
 // editor, and dismiss everything when the editor signals "Back to my step".
 import { useCallback, useEffect, useReducer, useRef, useSyncExternalStore } from "react";
 import type { AnswerPointerView, AnswerProvider } from "@/components/pointer/answer";
 import type { Plan } from "@/components/pointer/plan";
+import { questionToEnglish, translateReply, type AskedQuestion, type ReplyTranslation } from "@/lib/i18n/flow";
+import { ENGLISH, type LangCode, type Language } from "@/lib/i18n/languages";
+import type { TranslationService } from "@/lib/i18n/translator";
+import { pickVoice, speakingEstimateMs } from "@/lib/voice/voices";
 import { answerPointerView, answerSessionReducer, initialAnswerSession, replyId, spokenText } from "./answer-session";
 
 interface Options {
@@ -17,6 +22,10 @@ interface Options {
   backToStepSignal: number;
   /** Called after the session has dismissed itself for "Back to my step". */
   onDismissed: () => void;
+  /** The language replies are shown and spoken in, and the on-device translator. */
+  language: Language;
+  translation: TranslationService;
+  voices: readonly SpeechSynthesisVoice[];
 }
 
 function speech(): SpeechSynthesis | undefined {
@@ -42,20 +51,25 @@ export function useAnswerSession(o: Options) {
   const utterance = useRef<SpeechSynthesisUtterance | null>(null);
   const stopSpeaking = useCallback(() => speech()?.cancel(), []);
 
-  const speak = useCallback((id: string, text: string) => {
+  /** Speaks in `voice` only: a reply is never read in another language's voice. */
+  const speak = useCallback((id: string, text: string, voice: SpeechSynthesisVoice | undefined) => {
     const synth = speech();
     if (!synth || typeof SpeechSynthesisUtterance === "undefined") {
       dispatch({ type: "speechEnded", id });
       return;
     }
+    // No voice for this language on this device: the Ask tab says so; nothing is spoken,
+    // and the pointer behaves as with voice off.
+    if (!voice) return;
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     utterance.current = u; // Chrome drops onend for utterances that get garbage-collected
+    u.voice = voice;
+    u.lang = voice.lang;
     u.rate = 1.02;
     // Some engines never fire onend (no audio device, Chrome's long-utterance bug). A generous
-    // estimate of the speaking time (~130 words a minute) guarantees the pointer still fades.
-    const words = text.split(/\s+/).length;
-    const guard = setTimeout(() => finish(), Math.max(4000, words * 460 + 2000));
+    // estimate of the speaking time guarantees the pointer still fades.
+    const guard = setTimeout(() => finish(), speakingEstimateMs(text));
     const finish = () => {
       clearTimeout(guard);
       dispatch({ type: "speechEnded", id });
@@ -66,7 +80,8 @@ export function useAnswerSession(o: Options) {
   }, []);
 
   const ask = useCallback(
-    (question: string) => {
+    /** `known`: the question's language when the caller knows it (chips are English). */
+    (question: string, known?: LangCode) => {
       const q = question.trim();
       if (!q) return;
       inflight.current?.abort();
@@ -75,13 +90,26 @@ export function useAnswerSession(o: Options) {
       inflight.current = ctl;
       const id = `q${++seq.current}`;
       dispatch({ type: "ask", id, question: q });
-      const { provider, plan, city, projectType, planTargetId } = latest.current;
-      Promise.all([provider.ask(q, { plan, city, projectType, currentTargetId: planTargetId }, ctl.signal), minThink()])
-        .then(([result]) => {
+      const { provider, plan, city, projectType, planTargetId, language, translation } = latest.current;
+      const lang = language.code;
+      const run = async () => {
+        // Retrieval and the agent read English. A failed translation asks with the words as typed.
+        const asked: AskedQuestion = await questionToEnglish(q, lang, translation, known).catch(() => ({ original: q, english: q, from: lang }));
+        if (ctl.signal.aborted) throw new DOMException("Aborted", "AbortError");
+        const result = await provider.ask(asked.english, { plan, city, projectType, currentTargetId: planTargetId }, ctl.signal);
+        let translated: ReplyTranslation | undefined;
+        let failed = false;
+        if (lang !== "en") translated = await translateReply(result, lang, translation).catch(() => ((failed = true), undefined));
+        return { asked, result, translated, failed };
+      };
+      Promise.all([run(), minThink()])
+        .then(([{ asked, result, translated, failed }]) => {
           if (ctl.signal.aborted) return;
-          dispatch({ type: "resolved", id, result });
+          dispatch({ type: "resolved", id, result, asked, translation: translated, translationFailed: failed ? lang : undefined });
           if (latest.current.voice) {
-            speak(replyId(id), spokenText({ id: replyId(id), role: "pointer", text: result.text, result }));
+            const rid = replyId(id);
+            const voice = pickVoice(latest.current.voices, translated ? language : ENGLISH);
+            speak(rid, spokenText({ id: rid, role: "pointer", text: result.text, result, translation: translated }), voice);
           }
         })
         .catch(() => {
