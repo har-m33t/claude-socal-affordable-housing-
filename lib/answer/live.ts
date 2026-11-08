@@ -7,44 +7,12 @@
 import type { AnswerContext, AnswerProvider, AnswerResult } from "@/components/pointer/answer";
 import { parseEvent } from "@/components/pointer/contract";
 import { targetById } from "@/components/pointer/plan";
+import { readSseData } from "@/lib/live/sse-client";
 import { answerFromTarget, answerLocally } from "./local";
 
 export const OFFLINE_NOTE = "Answered from the documents (offline).";
 
-/** Yields the parsed JSON of each SSE `data:` payload. Malformed payloads are skipped. */
-export async function* readSseData(body: ReadableStream<Uint8Array>): AsyncGenerator<unknown> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
-  const flush = function* (block: string) {
-    const data = block
-      .split(/\r?\n/)
-      .filter((l) => l.startsWith("data:"))
-      .map((l) => l.slice(5).replace(/^ /, ""))
-      .join("\n");
-    if (!data) return;
-    try {
-      yield JSON.parse(data) as unknown;
-    } catch {
-      // Not JSON: ignore the frame rather than trust it.
-    }
-  };
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      buf += decoder.decode(value, { stream: !done });
-      const blocks = buf.split(/\r?\n\r?\n/);
-      buf = done ? "" : (blocks.pop() ?? "");
-      for (const b of blocks) yield* flush(b);
-      if (done) {
-        if (buf) yield* flush(buf);
-        return;
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
+export { readSseData };
 
 type Fetch = typeof fetch;
 

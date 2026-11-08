@@ -132,12 +132,6 @@ const RAW_CITIES: RawCity[] = [
 ];
 
 /**
- * "scripted": real city data, but the run is replayed from fixtures rather than
- * driven by the model. "live" once the editor is wired to /api/agent.
- */
-export const DATA_MODE: "scripted" | "live" = "scripted";
-
-/**
  * Team 1 records checklist_pdf as a repo path (data/docs/...). Next only serves
  * public/, so the same file is copied to public/data/docs/ and the repo path
  * maps onto the served URL by prefixing a slash.
@@ -465,3 +459,12 @@ export const PLAN: Plan = (() => {
   if (problems.length) throw new Error(`data/plans/anaheim-adu.json is invalid: ${problems.join("; ")}`);
   return plan;
 })();
+
+/**
+ * The plan for a city and project type, or undefined when none has been written.
+ * Only Anaheim ADU has one today; a verified city without a plan gets no run.
+ */
+export function planFor(city: string, projectType: string): Plan | undefined {
+  const norm = (v: string) => v.trim().toLowerCase();
+  return norm(PLAN.city) === norm(city) && norm(PLAN.project_type) === norm(projectType) ? PLAN : undefined;
+}

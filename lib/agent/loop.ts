@@ -37,6 +37,7 @@ import * as verifierModule from "./verifier";
 import { createRecorder } from "./recorder";
 import { loadReplay } from "./replay";
 import { loadPlansForCity, mergePlanTargets } from "../plan/load";
+import type { Plan } from "../../components/pointer/plan";
 
 import {
   DEFAULT_EFFORT,
@@ -130,7 +131,14 @@ export interface AgentRunDeps {
   recorder?: RecorderFactory;
   loadReplay?: ReplayLoader;
   createClient?: ClientFactory;
+  /**
+   * Loads the city file. When injected, its checklist is used as given and
+   * plans come only from `loadPlans` (none when that is absent too), so a test
+   * that injects a city controls the whole item_id allowlist.
+   */
   loadCity?: (city: string) => Promise<CityConfig>;
+  /** The city's step-by-step plans. Defaults to data/plans/<slug>-*.json. */
+  loadPlans?: (city: string) => Promise<Plan[]>;
   loadPack?: (projectType: string) => Promise<ProjectTypePack>;
   loadStatutes?: () => Promise<StatuteEntry[]>;
   readHandbook?: () => Promise<HandbookAttachment | null>;
@@ -189,10 +197,19 @@ async function readJsonFile<T>(file: string): Promise<T> {
  * verified flag, sources and fast paths come from the city file alone.
  */
 export async function loadCityFromDisk(appRoot: string, city: string): Promise<CityConfig> {
+  return (await loadCityWithPlans(appRoot, city)).city;
+}
+
+/** The merged city and the plans it was merged with: the prompt walks the plans. */
+export async function loadCityWithPlans(
+  appRoot: string,
+  city: string,
+): Promise<{ city: CityConfig; plans: Plan[] }> {
   const slug = slugify(city);
   if (!SLUG.test(slug)) throw new Error("unusable city name");
   const config = await readJsonFile<CityConfig>(nodePath.join(appRoot, "data", "cities", `${slug}.json`));
-  return mergePlanTargets(config, await loadPlansForCity(appRoot, slug));
+  const plans = await loadPlansForCity(appRoot, slug);
+  return { city: mergePlanTargets(config, plans), plans };
 }
 
 export async function loadPackFromDisk(
@@ -421,10 +438,14 @@ async function* runCore(
 
   // --- load the city and the pack. Nothing here is city-specific.
   let city: CityConfig;
+  let plans: Plan[];
   try {
-    city = await (deps.loadCity ?? ((name: string) => loadCityFromDisk(appRoot, name)))(
-      request.city,
-    );
+    if (deps.loadCity !== undefined) {
+      plans = deps.loadPlans !== undefined ? await deps.loadPlans(request.city) : [];
+      city = mergePlanTargets(await deps.loadCity(request.city), plans);
+    } else {
+      ({ city, plans } = await loadCityWithPlans(appRoot, request.city));
+    }
   } catch {
     yield error("city_not_found", `No city configuration exists for "${short(request.city, 60)}".`);
     yield status("stopped", "no city configuration");
@@ -499,6 +520,8 @@ async function* runCore(
     pack,
     statutes,
     handbookAttached: handbook !== null,
+    // A plan for another project type would walk the wrong form.
+    plans: plans.filter((p) => slugify(p.project_type) === slugify(pack.type)),
   });
   const toolDefs = cacheTools(tools.TOOL_DEFINITIONS);
   const messages: Anthropic.MessageParam[] = [
@@ -510,6 +533,7 @@ async function* runCore(
         handbookBase64: handbook?.base64,
         handbookTitle: handbook?.title,
         now: now(),
+        maxTurns: caps.maxSteps,
       }),
     },
   ];
