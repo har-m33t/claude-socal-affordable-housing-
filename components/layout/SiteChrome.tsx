@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { DATA_MODE } from "@/components/pointer/config";
 
 export function LegalBanner() {
   return (
@@ -62,7 +61,6 @@ export function SiteHeader() {
           <span aria-hidden className="text-[var(--fg-subtle)]">/</span>
           <span className="text-sm text-[var(--fg-muted)]">ADU permit copilot</span>
         </Link>
-        {DATA_MODE !== "live" && <span className="mock-tag">SCRIPTED RUN</span>}
       </div>
       <nav aria-label="Main" className="-mx-2 flex items-center overflow-x-auto">
         {NAV.map((n) => {

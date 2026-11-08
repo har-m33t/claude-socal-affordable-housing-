@@ -18,6 +18,7 @@
  * in the user turn AFTER the last breakpoint, so they never evict the prefix.
  */
 import type Anthropic from "@anthropic-ai/sdk";
+import type { Plan } from "../../components/pointer/plan";
 import type { CityConfig, ProjectTypePack, StatuteEntry } from "./types";
 
 /**
@@ -157,11 +158,70 @@ export interface SystemPromptOptions {
   statutes: StatuteEntry[];
   /** True when the handbook PDF was attached as a document block. */
   handbookAttached: boolean;
+  /**
+   * The city's step-by-step plans (data/plans/<city>-*.json). Trusted, stable
+   * per city, so they belong in the cached brief. Absent or empty: no plan.
+   */
+  plans?: Plan[];
+}
+
+/**
+ * How a full packet check walks the plan. Stable text, so it lives in the
+ * cached brief; it only applies when the person asks for a packet check, so a
+ * question from the Ask tab is still answered the ordinary way.
+ */
+export const PLAN_WALK_RULES = `HOW TO CHECK A PACKET AGAINST THE PLAN
+When the person asks you to check their packet (or their documents) against
+the plan, walk the plan below and do nothing else:
+- Visit the steps in the order listed, and the targets inside each step in the
+  order listed. Skip a step only if none of its targets are listed for you.
+- point_to each target before you mark it, draft it or note it.
+- mark_item each target that is a requirement: "complete" only when the
+  attached documents show it, "missing" when they plainly do not, "unknown"
+  when you cannot tell. If a short reason helps, add_note on that same target
+  with at most 8 words, drawn only from the attached documents.
+- draft_field a form field only with a value that appears, character for
+  character, in an attached document. Redaction tokens such as [NAME_1] count:
+  copy them exactly. If no document has the value, mark the field "unknown"
+  instead of drafting it.
+- highlight a target, with statute_id, only when it rests on a statute that is
+  in the statute table above. Never highlight to talk about law otherwise.
+- No explanations, no summaries, no advice. The person can ask questions in
+  the chat afterwards; that is where explaining happens.
+- Turns are limited, so batch: make every call for a step in one turn, and
+  cover several steps per turn. Stop once the last step is done.`;
+
+/** One line per plan step, listing only the targets the agent may name. */
+function planLines(plans: Plan[], allowed: ReadonlySet<string>): string[] {
+  const lines: string[] = [];
+  for (const plan of plans) {
+    lines.push(`PLAN: ${plan.city} / ${plan.project_type} (trusted; ${plan.steps.length} steps, in order)`);
+    lines.push("step | title | kind | document | targets in order (id: label)");
+    plan.steps.forEach((step, index) => {
+      const doc = plan.documents.find((d) => d.id === step.doc);
+      const targets = step.targets
+        .filter((id) => allowed.has(id))
+        .map((id) => `${id}: ${plan.targets.find((t) => t.id === id)?.label ?? id}`);
+      lines.push(
+        [
+          `${index + 1}`,
+          step.title,
+          step.kind,
+          doc ? `${doc.id} (${doc.title})` : step.doc,
+          targets.length > 0
+            ? targets.join(" ; ")
+            : "none for you - the app shows this step itself (the homeowner's file board)",
+        ].join(" | "),
+      );
+    });
+    lines.push("");
+  }
+  return lines;
 }
 
 /** The per-city half of the system prompt. Stable for a given city + type. */
 export function buildCityBrief(opts: SystemPromptOptions): string {
-  const { city, pack, statutes, handbookAttached } = opts;
+  const { city, pack, statutes, handbookAttached, plans = [] } = opts;
   const lines: string[] = [];
 
   lines.push("CITY CONFIGURATION (trusted; this is the only checklist there is)");
@@ -233,6 +293,15 @@ export function buildCityBrief(opts: SystemPromptOptions): string {
     "If a point_to or highlight target has no measured box, say the hand cannot point at it rather than pointing somewhere else.",
   );
 
+  lines.push("");
+  if (plans.length === 0) {
+    lines.push("PLAN: none recorded for this city and type. If asked to check a packet, say there is no plan yet.");
+  } else {
+    // Only ids the validator will accept are listed: the allowlist is the checklist.
+    lines.push(...planLines(plans, new Set(city.checklist.map((c) => c.id))));
+    lines.push(PLAN_WALK_RULES);
+  }
+
   return lines.join("\n");
 }
 
@@ -260,6 +329,8 @@ export interface UserTurnOptions {
   handbookTitle?: string | undefined;
   /** ISO timestamp for this run. Volatile: it goes last. */
   now: string;
+  /** The run's turn cap, so the model can budget a long plan walk. */
+  maxTurns?: number | undefined;
 }
 
 /**
@@ -333,6 +404,9 @@ export function buildUserContent(opts: UserTurnOptions): Anthropic.ContentBlockP
   parts.push(
     "Answer with tool calls where a tool fits, and group the calls you can make at once into a single turn. Then stop.",
   );
+  if (opts.maxTurns !== undefined) {
+    parts.push(`This run allows at most ${opts.maxTurns} turns in total, so batch several tool calls per turn.`);
+  }
 
   blocks.push({ type: "text", text: parts.join("\n") });
   return blocks;
